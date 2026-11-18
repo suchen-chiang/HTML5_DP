@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>動態規劃互動教學 — Dynamic Programming</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --code: #0b1120; --border: #334155;
+    --text: #f8fafc; --muted: #94a3b8; --violet: #a78bfa; --violet2: #8b5cf6;
+    --amber: #fbbf24; --green: #34d399; --rose: #fb7185;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; background: var(--bg); color: var(--text);
+    padding: 28px 24px; min-height: 100vh; max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+  header { background: var(--panel); padding: 22px 28px; border-radius: 16px; border: 1px solid var(--border); }
+  header h1 { font-size: 30px; color: var(--violet); margin-bottom: 8px; }
+  header p { font-size: 16px; color: var(--muted); line-height: 1.7; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px;
+    display: flex; flex-direction: column; gap: 11px; transition: 0.18s; text-decoration: none; color: inherit; }
+  .card:hover { transform: translateY(-4px); border-color: var(--violet); box-shadow: 0 10px 26px rgba(139,92,246,0.22); }
+  .num { font-size: 13px; color: var(--muted); font-family: Consolas, monospace; }
+  .card h2 { font-size: 21px; color: var(--violet); }
+  .card .en { font-size: 14px; color: var(--green); font-family: Consolas, monospace; }
+  .card .desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+  .tag { font-size: 12.5px; background: var(--code); border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; color: var(--amber); font-family: Consolas, monospace; }
+  .btn { display: inline-block; margin-top: 2px; background: var(--violet2); color: #fff; font-weight: bold; border-radius: 9px; padding: 8px 14px; text-align: center; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 8px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🧠 動態規劃互動教學</h1>
+    <p>第 16 章「動態規劃 (Dynamic Programming)」逐步動畫：從費波那契數列與純遞迴的對照出發，進階到 0/1 背包、旅遊行程、最長共用子序列 (LCS) 與弗洛伊德全點對最短路徑，以二維填表動畫理解狀態轉移。</p>
+  </header>
+
+  <main class="grid">
+    <a class="card" href="ch16_1_fibonacci_rabbit_tree_animation.html">
+      <span class="num">16-1・暖身</span>
+      <h2>兔子繁殖與費氏數列</h2>
+      <span class="en">Fibonacci &amp; Rabbit Model</span>
+      <p class="desc">從兔子繁殖模型直觀認識費波納契數列的成長規律。</p>
+      <div class="tags"><span class="tag">遞迴概念</span><span class="tag">費氏數列</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+
+    <a class="card" href="ch16_1_fibonacce_squence_dp.html">
+      <span class="num">16-1</span>
+      <h2>費波納契數列</h2>
+      <span class="en">Fibonacci (DP)</span>
+      <p class="desc">用動態規劃避免重複計算，逐步演示自底向上的求解過程。</p>
+      <div class="tags"><span class="tag">記憶化</span><span class="tag">自底向上</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+
+    <a class="card" href="ch16_1_recursion_vs_dp_duel.html">
+      <span class="num">16-1</span>
+      <h2>純遞迴 vs 動態規劃</h2>
+      <span class="en">Recursion vs. DP</span>
+      <p class="desc">語音互動對照：純遞迴的重複計算 vs. 動態規劃的最佳化。</p>
+      <div class="tags"><span class="tag">時間複雜度</span><span class="tag">對照演示</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+
+    <a class="card" href="ch16_2_knapsack_dp.html">
+      <span class="num">16-2</span>
+      <h2>0/1 背包問題</h2>
+      <span class="en">0/1 Knapsack (DP)</span>
+      <p class="desc">二維 DP 填表與程式碼同步動畫，理解狀態轉移方程式。</p>
+      <div class="tags"><span class="tag">狀態轉移</span><span class="tag">二維填表</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+
+    <a class="card" href="ch16_3_4_travel_gold_dp.html">
+      <span class="num">16-3・16-4</span>
+      <h2>旅遊行程 &amp; 挖金礦</h2>
+      <span class="en">Trip &amp; Gold Mining</span>
+      <p class="desc">以二維填表動畫示範行程安排與金礦採集的決策過程。</p>
+      <div class="tags"><span class="tag">表格 DP</span><span class="tag">決策</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+
+    <a class="card" href="ch16_5_lcs_dp.html">
+      <span class="num">16-5</span>
+      <h2>最長共用子字串 / 子序列</h2>
+      <span class="en">LCS &amp; Substring</span>
+      <p class="desc">同步比較「子字串」與「子序列」兩類動態規劃求解的差異。</p>
+      <div class="tags"><span class="tag">LCS</span><span class="tag">字串比對</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+
+    <a class="card" href="ch16_6_floyd_warshall_dp.html">
+      <span class="num">16-6</span>
+      <h2>弗洛伊德演算法</h2>
+      <span class="en">Floyd-Warshall</span>
+      <p class="desc">逐步演示求所有點對最短路徑的动态規劃與 k 層迭代。</p>
+      <div class="tags"><span class="tag">全點對最短路</span><span class="tag">k 層迭代</span></div>
+      <span class="btn">開始演示 →</span>
+    </a>
+  </main>
+
+  <footer>HTML5 互動教學・第 16 章動態規劃・以 GitHub Pages 架設</footer>
+</body>
+</html>

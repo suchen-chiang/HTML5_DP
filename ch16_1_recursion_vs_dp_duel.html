@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>純遞迴（Recursion）vs. 動態規劃（DP）— 核心差異互動語音教學動畫</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --code-bg: #0b1120; --border: #334155;
+    --text: #f8fafc; --muted: #94a3b8; --cyan: #38bdf8; --amber: #fbbf24;
+    --green: #34d399; --rose: #fb7185; --purple: #c084fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); padding: 14px 20px; min-height: 100vh; display: flex; flex-direction: column; gap: 11px; }
+  
+  header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 12px 18px; border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+  .title-area h1 { font-size: 23px; color: var(--amber); margin-bottom: 3px; }
+  .title-area p { font-size: 13.5px; color: var(--muted); }
+  
+  .controls { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  button, select { font-family: inherit; font-size: 14px; font-weight: bold; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: 0.15s; }
+  select { background: var(--code-bg); color: var(--text); }
+  .btn-nav { background: #334155; color: var(--text); }
+  .btn-nav:hover:not(:disabled) { background: #475569; }
+  .btn-primary { background: var(--cyan); color: #0f172a; border-color: var(--cyan); }
+  .btn-play { background: var(--green); color: #0f172a; border-color: var(--green); }
+  .btn-voice-on { background: rgba(251, 191, 36, 0.22); color: var(--amber); border-color: var(--amber); }
+  .btn-voice-off { background: #1e293b; color: var(--muted); border-color: var(--border); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .step-badge { font-size: 14px; background: var(--code-bg); padding: 7px 11px; border-radius: 8px; border: 1px solid var(--border); color: var(--amber); font-weight: bold; }
+
+  /* Tabs */
+  .tab-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .tab-group { display: flex; gap: 10px; }
+  .tab-btn { background: var(--panel); color: var(--muted); border: 1.5px solid var(--border); padding: 8px 16px; border-radius: 10px; font-size: 15px; }
+  .tab-btn.active { background: rgba(56, 189, 248, 0.18); color: var(--cyan); border-color: var(--cyan); }
+
+  .voice-bar { display: flex; align-items: center; gap: 8px; background: var(--panel); padding: 6px 12px; border-radius: 10px; border: 1px solid var(--border); }
+  .speaking-dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; display: inline-block; }
+  .speaking-dot.active { background: var(--green); box-shadow: 0 0 10px var(--green); animation: blink 0.8s infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Duel Grid */
+  .duel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1; }
+  @media (max-width: 1100px) { .duel-grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 13px 15px; display: flex; flex-direction: column; gap: 9px; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+  .card-header h2 { font-size: 18.5px; }
+  .badge { font-size: 13px; padding: 3px 9px; border-radius: 6px; font-weight: bold; font-family: Consolas, monospace; }
+
+  .code-mini { background: var(--code-bg); border-radius: 8px; padding: 7px 11px; font-family: Consolas, monospace; font-size: 13.5px; line-height: 1.48; border: 1px solid #1e293b; }
+  .code-line { padding: 1px 6px; border-left: 3px solid transparent; white-space: pre; }
+  .code-line.active-rec { background: rgba(251, 113, 133, 0.22); border-left-color: var(--rose); color: #fff; font-weight: bold; }
+  .code-line.active-dp { background: rgba(52, 211, 153, 0.22); border-left-color: var(--green); color: #fff; font-weight: bold; }
+  .kw { color: #c084fc; }
+
+  .visual-box { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 280px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-pill { background: #131c31; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; text-align: center; }
+  .stat-lbl { font-size: 11.5px; color: var(--muted); }
+  .stat-num { font-size: 17px; font-weight: bold; font-family: Consolas, monospace; margin-top: 2px; }
+
+  .dp-array { display: flex; justify-content: center; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .dp-cell { width: 58px; border: 2px solid var(--border); border-radius: 8px; overflow: hidden; text-align: center; background: #1e293b; transition: 0.25s; }
+  .dp-cell-idx { background: #172554; color: var(--cyan); font-size: 12px; padding: 3px 0; font-family: Consolas, monospace; font-weight: bold; }
+  .dp-cell-val { font-size: 20px; font-weight: bold; padding: 10px 0; font-family: Consolas, monospace; color: var(--muted); }
+  .dp-cell.filled { border-color: var(--green); }
+  .dp-cell.filled .dp-cell-val { color: var(--green); }
+  .dp-cell.target { border-color: var(--amber); box-shadow: 0 0 14px rgba(251, 191, 36, 0.5); transform: translateY(-4px); }
+  .dp-cell.target .dp-cell-val { color: var(--amber); }
+  .dp-cell.source { border-color: var(--cyan); border-style: dashed; }
+  .dp-cell.source .dp-cell-val { color: var(--cyan); }
+
+  .stack-box { background: #131c31; border: 1px dashed var(--rose); border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+  .stack-items { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; min-height: 25px; align-items: center; }
+  .stack-frame { background: rgba(251, 113, 133, 0.22); border: 1px solid var(--rose); color: #fecdd3; padding: 2px 8px; border-radius: 5px; font-family: Consolas, monospace; font-size: 12.5px; font-weight: bold; }
+
+  .explain-bar { background: var(--panel); border-left: 5px solid var(--amber); border-radius: 10px; padding: 11px 15px; font-size: 16px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+  /* 4-Dimension Comparison View */
+  .compare-view { display: none; grid-template-columns: repeat(2, 1fr); gap: 14px; flex: 1; }
+  @media (max-width: 1000px) { .compare-view { grid-template-columns: 1fr; } }
+  .dim-card { background: var(--panel); border: 1.5px solid var(--border); border-radius: 12px; padding: 15px 17px; display: flex; flex-direction: column; gap: 9px; cursor: pointer; transition: 0.2s; }
+  .dim-card:hover { border-color: var(--amber); transform: translateY(-2px); }
+  .dim-title { font-size: 19px; font-weight: bold; color: var(--amber); border-bottom: 1px solid var(--border); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .dim-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; }
+  .dim-side { background: var(--code-bg); border-radius: 8px; padding: 11px; border-top: 3px solid transparent; }
+  .dim-side h4 { font-size: 15.5px; margin-bottom: 5px; }
+  .dim-side p { font-size: 14.5px; line-height: 1.48; color: #e2e8f0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-area">
+    <h1>⚔️ 純遞迴（Recursion）vs. 動態規劃（DP）— 語音互動教學動畫</h1>
+    <p>內建中文語音旁白解說，同步對比「由上而下重複計算」與「由下而上建表記憶」的執行差異</p>
+  </div>
+  <div class="controls" id="simControls">
+    <select id="nSelect" onchange="initSim()">
+      <option value="4">計算 F(4)</option>
+      <option value="5" selected>計算 F(5)（經典重疊）</option>
+    </select>
+    <button class="btn-nav" onclick="resetSim()">⟲ 重置</button>
+    <button class="btn-nav" id="prevBtn" onclick="prevStep()">◀ 上一步</button>
+    <button class="btn-primary" id="nextBtn" onclick="nextStep()">下一步 ▶</button>
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶ 自動播放</button>
+    <div class="step-badge" id="stepCounter">步驟 0 / 0</div>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <div class="tab-group">
+    <button class="tab-btn active" id="tabDuel" onclick="switchTab('duel')">🎬 1. 雙軌執行過程同步對決（F(n) 實戰動畫）</button>
+    <button class="tab-btn" id="tabSummary" onclick="switchTab('summary')">📊 2. 四大核心差異總結對照表（點擊卡片可朗讀）</button>
+  </div>
+
+  <div class="voice-bar">
+    <span class="speaking-dot" id="speakDot"></span>
+    <button class="btn-voice-on" id="voiceToggleBtn" onclick="toggleVoice()">🔊 語音解說：開啟</button>
+    <button class="btn-nav" onclick="replayVoice()" title="重新朗讀目前步驟說明">🗣️ 重聽解說</button>
+    <select id="rateSelect" onchange="replayVoice()" title="調整語音速度">
+      <option value="0.9">語速 0.9x</option>
+      <option value="1.05" selected>語速 1.0x (標準)</option>
+      <option value="1.25">語速 1.25x (稍快)</option>
+    </select>
+  </div>
+</div>
+
+<!-- VIEW 1: LIVE DUEL SIMULATION -->
+<div class="duel-grid" id="duelView">
+  <div class="card" style="border-color: rgba(251, 113, 133, 0.45);">
+    <div class="card-header">
+      <h2 style="color:var(--rose);">🔴 純遞迴（Top-Down 由上而下）</h2>
+      <span class="badge" style="background:rgba(251,113,133,0.2); color:var(--rose);">時間 O(2ⁿ)｜無建表</span>
+    </div>
+
+    <div class="code-mini" id="recCode"></div>
+
+    <div class="stats-row">
+      <div class="stat-pill"><div class="stat-lbl">累計函式呼叫次數</div><div class="stat-num" id="recCalls" style="color:var(--rose);">0</div></div>
+      <div class="stat-pill"><div class="stat-lbl">重複浪費計算次數</div><div class="stat-num" id="recDup" style="color:var(--amber);">0</div></div>
+      <div class="stat-pill"><div class="stat-lbl">目前堆疊深度</div><div class="stat-num" id="recDepth">0</div></div>
+    </div>
+
+    <div class="visual-box">
+      <div style="font-size:13px; color:var(--muted); text-align:center;">遞迴呼叫樹（黃框代表「重複重新計算」的子問題）</div>
+      <div id="recTreeWrap" style="display:flex; justify-content:center; align-items:center; flex:1;"></div>
+      <div class="stack-box">
+        <div style="color:var(--rose); font-weight:bold;">系統呼叫堆疊（Call Stack 暫存中）：</div>
+        <div class="stack-items" id="recStack"><span style="color:#64748b;">(空)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border-color: rgba(52, 211, 153, 0.45);">
+    <div class="card-header">
+      <h2 style="color:var(--green);">🟢 動態規劃 DP（Bottom-Up 由下而上）</h2>
+      <span class="badge" style="background:rgba(52,211,153,0.2); color:var(--green);">時間 O(n)｜建表記憶</span>
+    </div>
+
+    <div class="code-mini" id="dpCode"></div>
+
+    <div class="stats-row">
+      <div class="stat-pill"><div class="stat-lbl">累計迴圈計算次數</div><div class="stat-num" id="dpOps" style="color:var(--green);">0</div></div>
+      <div class="stat-pill"><div class="stat-lbl">重複浪費計算次數</div><div class="stat-num" id="dpDup" style="color:var(--cyan);">0 (永不重複!)</div></div>
+      <div class="stat-pill"><div class="stat-lbl">記憶體結構</div><div class="stat-num" style="color:var(--purple); font-size:14px;">1D 陣列 dp[]</div></div>
+    </div>
+
+    <div class="visual-box">
+      <div style="font-size:13px; color:var(--muted); text-align:center;">DP 狀態記憶表格 dp[0..n]（從最基礎小問題由左向右填表）</div>
+      <div class="dp-array" id="dpArray"></div>
+      <div style="background:#131c31; border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14.5px; line-height:1.5;" id="dpNote">
+        準備初始化 dp[0] = 0 與 dp[1] = 1...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW 2: 4-DIMENSION SUMMARY -->
+<div class="compare-view" id="summaryView">
+  <div class="dim-card" onclick="speakCard(0)">
+    <div class="dim-title">
+      <span>1. 思考與計算方向相反（Top-Down vs. Bottom-Up）</span>
+      <span style="font-size:13px; color:var(--cyan);">🔊 點擊朗讀</span>
+    </div>
+    <div class="dim-split">
+      <div class="dim-side" style="border-top-color:var(--rose);">
+        <h4 style="color:var(--rose);">🔴 純遞迴：由上而下（Top-Down）</h4>
+        <p>從最大的原始問題 F(5) 出發，層層往下拆解呼叫 F(4)、F(3)... 直到撞見終止條件 F(1)、F(0) 才開始一層層回傳結果。</p>
+      </div>
+      <div class="dim-side" style="border-top-color:var(--green);">
+        <h4 style="color:var(--green);">🟢 動態規劃：由下而上（Bottom-Up）</h4>
+        <p>直接從最小、最基礎的邊界條件 dp[0]=0, dp[1]=1 開始，透過迴圈由小往大依序填表，逐步推導出最終目標 dp[5]。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dim-card" onclick="speakCard(1)">
+    <div class="dim-title">
+      <span>2. 是否解決「重疊子問題」（時間複雜度差距）</span>
+      <span style="font-size:13px; color:var(--cyan);">🔊 點擊朗讀</span>
+    </div>
+    <div class="dim-split">
+      <div class="dim-side" style="border-top-color:var(--rose);">
+        <h4 style="color:var(--rose);">🔴 純遞迴：每次重新計算 O(2ⁿ)</h4>
+        <p>沒有記憶能力！算 F(5) 時，F(3) 被重算 2 次、F(2) 被重算 3 次；當 n=50 時會產生超過 200 兆次呼叫而當機。</p>
+      </div>
+      <div class="dim-side" style="border-top-color:var(--green);">
+        <h4 style="color:var(--green);">🟢 動態規劃：建表記憶 O(n)</h4>
+        <p>以「空間換取時間」，每個子問題一生只算一次並存入表格，下次需要時直接 O(1) 查表取得，n=50 只需 49 次加法。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dim-card" onclick="speakCard(2)">
+    <div class="dim-title">
+      <span>3. 記憶體使用方式與風險（Call Stack vs. 陣列）</span>
+      <span style="font-size:13px; color:var(--cyan);">🔊 點擊朗讀</span>
+    </div>
+    <div class="dim-split">
+      <div class="dim-side" style="border-top-color:var(--rose);">
+        <h4 style="color:var(--rose);">🔴 純遞迴：系統呼叫堆疊（Call Stack）</h4>
+        <p>每次呼叫函式都要在系統堆疊保留返回位址與區域變數。若遞迴深度過深（如 n=10,000），會直接發生 Stack Overflow 溢位當機。</p>
+      </div>
+      <div class="dim-side" style="border-top-color:var(--green);">
+        <h4 style="color:var(--green);">🟢 動態規劃：一維/二維陣列（Heap）</h4>
+        <p>自己配置固定大小的陣列（dp / table）並用單純的 for 迴圈迭代更新，沒有函式呼叫開銷，也絕不會發生堆疊溢位。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dim-card" onclick="speakCard(3)">
+    <div class="dim-title">
+      <span>4. 問題適用場景（獨立子問題 vs. 重疊最佳化）</span>
+      <span style="font-size:13px; color:var(--cyan);">🔊 點擊朗讀</span>
+    </div>
+    <div class="dim-split">
+      <div class="dim-side" style="border-top-color:var(--cyan);">
+        <h4 style="color:var(--cyan);">🔵 遞迴（分治法 Divide & Conquer）</h4>
+        <p>適合「子問題彼此獨立、不重疊」的問題。例如<b>合併排序、快速排序</b>，左右兩半資料完全不同，算過一次不再用到，無需建表。</p>
+      </div>
+      <div class="dim-side" style="border-top-color:var(--amber);">
+        <h4 style="color:var(--amber);">🟡 動態規劃（DP）</h4>
+        <p>專門處理「子問題高度重疊」且具備「最優子結構」的問題，如<b>0/1 背包、最長共用子序列、Floyd-Warshall 最短路徑</b>。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="explain-bar">
+  <div id="explainBar">點擊「下一步」或「自動播放」，系統將同步進行語音解說與動畫演示！</div>
+</div>
+
+<script>
+const REC_CODE = [
+  'def fib_rec(n):',
+  '    if n <= 1: return n',
+  '    # 每次都重新呼叫兩個分支，無記憶！',
+  '    return fib_rec(n-1) + fib_rec(n-2)'
+];
+
+const DP_CODE = [
+  'def fib_dp(n):',
+  '    dp = [0] * (n + 1)',
+  '    dp[0], dp[1] = 0, 1      # 由小開始初始化',
+  '    for i in range(2, n + 1):',
+  '        dp[i] = dp[i-1] + dp[i-2]  # 直接查表相加'
+];
+
+const CARD_SCRIPTS = [
+  "第一點，思考與計算方向相反。純遞迴是由上而下，從最大的問題出發層層拆解；而動態規劃則是由下而上，直接從最小、最基礎的邊界條件開始填表推導。",
+  "第二點，是否解決重疊子問題。純遞迴沒有記憶能力，遇到相同子問題會重複重新計算，時間複雜度高達二的 n 次方；動態規劃透過建表記憶，每個子問題一生只算一次，時間複雜度大幅降為 O(n)。",
+  "第三點，記憶體使用方式不同。純遞迴依賴系統的函式呼叫堆疊，遞迴太深容易發生堆疊溢位；動態規劃使用自己配置的一維或二維陣列搭配迴圈迭代，安全且沒有呼叫開銷。",
+  "第四點，適用題型不同。遞迴的分治法適合子問題彼此獨立不重疊的問題，例如合併排序與快速排序；動態規劃則專門解決子問題高度重疊的最佳化問題，例如零一背包與最短路徑。"
+];
+
+let steps = [], cur = 0, isPlaying = false, playTimeout = null;
+let voiceEnabled = true;
+let lastSpokenText = "";
+let zhVoice = null;
+
+// Initialize Traditional Chinese Voice
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = window.speechSynthesis.getVoices();
+  zhVoice = voices.find(v => v.lang === 'zh-TW')
+         || voices.find(v => v.lang.includes('zh-Hant'))
+         || voices.find(v => v.lang.includes('zh'))
+         || null;
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function cleanTextForSpeech(raw) {
+  return raw
+    .replace(/<[^>]*>/g, '')
+    .replace(/[🔴🟢🔵🟡⚠️🎉💡★｜\[\]]/g, ' ')
+    .replace(/F\((\d+)\)/g, 'F $1 ')
+    .replace(/dp\[(\d+)\]/g, 'dp $1 ')
+    .replace(/dp\[i-1\]/g, 'dp i 減 1')
+    .replace(/dp\[i-2\]/g, 'dp i 減 2')
+    .replace(/O\(2ⁿ\)/g, 'O 2 的 n 次方')
+    .replace(/O\(n\)/g, 'O n')
+    .replace(/O\(1\)/g, 'O 1')
+    .replace(/➔|→/g, '，接著')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function speakText(text, onEndCallback) {
+  lastSpokenText = text;
+  const dot = document.getElementById('speakDot');
+
+  if (!voiceEnabled || !('speechSynthesis' in window)) {
+    dot.classList.remove('active');
+    if (onEndCallback) {
+      playTimeout = setTimeout(onEndCallback, 1600);
+    }
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
+  if (zhVoice) utter.voice = zhVoice;
+  utter.lang = 'zh-TW';
+  utter.rate = parseFloat(document.getElementById('rateSelect').value) || 1.05;
+  utter.pitch = 1.0;
+
+  utter.onstart = () => dot.classList.add('active');
+  utter.onend = () => {
+    dot.classList.remove('active');
+    if (onEndCallback) {
+      playTimeout = setTimeout(onEndCallback, 450);
+    }
+  };
+  utter.onerror = () => {
+    dot.classList.remove('active');
+    if (onEndCallback) {
+      playTimeout = setTimeout(onEndCallback, 1400);
+    }
+  };
+
+  window.speechSynthesis.speak(utter);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const btn = document.getElementById('voiceToggleBtn');
+  if (voiceEnabled) {
+    btn.textContent = '🔊 語音解說：開啟';
+    btn.className = 'btn-voice-on';
+    replayVoice();
+  } else {
+    btn.textContent = '🔇 語音解說：靜音';
+    btn.className = 'btn-voice-off';
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    document.getElementById('speakDot').classList.remove('active');
+  }
+}
+
+function replayVoice() {
+  if (lastSpokenText && voiceEnabled) {
+    speakText(lastSpokenText, null);
+  }
+}
+
+function speakCard(idx) {
+  const msg = CARD_SCRIPTS[idx];
+  document.getElementById('explainBar').innerHTML = `🔊 <b>語音講解中</b>：${msg}`;
+  speakText(msg, null);
+}
+
+function switchTab(tab) {
+  stopPlay();
+  document.getElementById('tabDuel').classList.toggle('active', tab === 'duel');
+  document.getElementById('tabSummary').classList.toggle('active', tab === 'summary');
+  document.getElementById('duelView').style.display = tab === 'duel' ? 'grid' : 'none';
+  document.getElementById('summaryView').style.display = tab === 'summary' ? 'grid' : 'none';
+  document.getElementById('simControls').style.visibility = tab === 'duel' ? 'visible' : 'hidden';
+
+  if (tab === 'summary') {
+    const sumText = '課堂總結金句：遞迴加上記憶化表格，在概念上就等價於動態規劃；標準動態規劃則是更進一步將遞迴改寫為由下而上的迴圈填表，徹底消除函式呼叫堆疊的負擔！你可以點擊上方四張卡片聽取個別語音說明。';
+    document.getElementById('explainBar').innerHTML = '💡 <b>課堂總結金句</b>：「<b>遞迴 ＋ 記憶化表格（Memoization）</b>」在概念上就等價於動態規劃；標準 DP 則是更進一步將遞迴改寫為「由下而上的迴圈填表」，徹底消除函式呼叫堆疊的負擔！（點擊任一張卡片可語音朗讀）';
+    speakText(sumText, null);
+  } else {
+    render(true);
+  }
+}
+
+function renderCodeBlocks() {
+  document.getElementById('recCode').innerHTML = REC_CODE.map((l, i) => {
+    const f = l.replace(/(def|if|return)/g, '<span class="kw">$1</span>');
+    return `<div class="code-line" id="rline-${i+1}">${f}</div>`;
+  }).join('');
+  document.getElementById('dpCode').innerHTML = DP_CODE.map((l, i) => {
+    const f = l.replace(/(def|for|in|range)/g, '<span class="kw">$1</span>');
+    return `<div class="code-line" id="dline-${i+1}">${f}</div>`;
+  }).join('');
+}
+
+function buildSimulation(N) {
+  let nodeId = 1;
+  const treeNodes = {};
+
+  function buildTree(val, depth, xMin, xMax) {
+    const id = nodeId++;
+    const x = (xMin + xMax) / 2;
+    const y = depth * 52 + 24;
+    const nd = { id, val, depth, x, y, leftId: null, rightId: null };
+    treeNodes[id] = nd;
+    if (val > 1) {
+      const mid = (xMin + xMax) / 2;
+      nd.leftId = buildTree(val - 1, depth + 1, xMin, mid);
+      nd.rightId = buildTree(val - 2, depth + 1, mid, xMax);
+    }
+    return id;
+  }
+
+  const width = N === 5 ? 460 : 340;
+  const rootId = buildTree(N, 0, 10, width - 10);
+  const height = (N + 1) * 52 + 12;
+
+  const recEvents = [];
+  const computedCount = {};
+  const nodeStatus = {};
+  Object.keys(treeNodes).forEach(k => nodeStatus[k] = 'hidden');
+  const stack = [];
+  let totalCalls = 0, dupCalls = 0;
+
+  function traceRec(id) {
+    const nd = treeNodes[id];
+    totalCalls++;
+    stack.push(`F(${nd.val})`);
+    const isDup = (computedCount[nd.val] || 0) >= 1;
+    if (isDup) dupCalls++;
+
+    nodeStatus[id] = isDup ? 'dup' : 'active';
+    recEvents.push({
+      line: nd.val <= 1 ? 2 : 4,
+      calls: totalCalls, dup: dupCalls,
+      stack: [...stack],
+      statuses: { ...nodeStatus },
+      activeId: id,
+      speech: isDup
+        ? `注意！純遞迴又再次呼叫 F(${nd.val})，因為沒有建表記憶，被迫重複重新計算！`
+        : (nd.val <= 1 ? `純遞迴抵達邊界 F(${nd.val}) 等於 ${nd.val}。` : `純遞迴從上往下呼叫 F(${nd.val})。`)
+    });
+
+    if (nd.val > 1) {
+      traceRec(nd.leftId);
+      traceRec(nd.rightId);
+    }
+
+    computedCount[nd.val] = (computedCount[nd.val] || 0) + 1;
+    nodeStatus[id] = 'done';
+    stack.pop();
+    recEvents.push({
+      line: 4,
+      calls: totalCalls, dup: dupCalls,
+      stack: [...stack],
+      statuses: { ...nodeStatus },
+      activeId: id,
+      speech: `純遞迴算完 F(${nd.val}) 並彈出堆疊，但算完就忘記了。`
+    });
+  }
+  traceRec(rootId);
+
+  const dpEvents = [];
+  const dpArr = Array(N + 1).fill(null);
+
+  dpEvents.push({
+    line: 2, ops: 0, dp: [...dpArr], target: -1, sources: [],
+    note: `建立大小為 ${N + 1} 的一維記憶陣列 dp[0..${N}]。`,
+    speech: `動態規劃先建立一張記憶表格 dp 陣列。`
+  });
+
+  dpArr[0] = 0;
+  dpArr[1] = 1;
+  dpEvents.push({
+    line: 3, ops: 0, dp: [...dpArr], target: 1, sources: [0],
+    note: `初始化最基礎邊界：dp[0] = 0，dp[1] = 1（由下而上起點）。`,
+    speech: `動態規劃由下而上，直接填入最基礎的 dp 0 等於 0，dp 1 等於 1。`
+  });
+
+  let ops = 0;
+  for (let i = 2; i <= N; i++) {
+    ops++;
+    dpArr[i] = dpArr[i - 1] + dpArr[i - 2];
+    dpEvents.push({
+      line: 5, ops, dp: [...dpArr], target: i, sources: [i - 1, i - 2],
+      note: `直接查表相加：dp[${i}] = dp[${i-1}] (${dpArr[i-1]}) + dp[${i-2}] (${dpArr[i-2]}) = ${dpArr[i]}！`,
+      speech: `動態規劃計算 dp ${i}，直接查表把前兩格 ${dpArr[i-1]} 加 ${dpArr[i-2]}，得到 ${dpArr[i]}，完全不重複計算。`
+    });
+  }
+
+  dpEvents.push({
+    line: 5, ops, dp: [...dpArr], target: N, sources: [],
+    note: `🎉 DP 早已完成全部計算！總共只花費 ${ops} 次加法就求出 F(${N}) = ${dpArr[N]}。`,
+    speech: `動態規劃已經算出最終答案 ${dpArr[N]} 了！`
+  });
+
+  const maxLen = Math.max(recEvents.length, dpEvents.length);
+  const combined = [];
+  for (let t = 0; t < maxLen; t++) {
+    const rEv = recEvents[Math.min(t, recEvents.length - 1)];
+    const dEv = dpEvents[Math.min(t, dpEvents.length - 1)];
+    const dpFinished = t >= dpEvents.length - 1;
+
+    let displayHtml = '';
+    let spokenNarration = '';
+
+    if (t < dpEvents.length - 1) {
+      displayHtml = `🟢 <b>動態規劃</b>：${dEv.note}<br>🔴 <b>純遞迴</b>：${rEv.speech}`;
+      spokenNarration = `${dEv.speech} 同時，${rEv.speech}`;
+    } else if (t === dpEvents.length - 1) {
+      displayHtml = `🎉 <b>動態規劃（DP）已率先完工！</b>僅用 ${ops} 次加法求出 F(${N}) = ${dpArr[N]}。<br>🔴 <b>純遞迴</b>：才剛算到一半（已呼叫 ${rEv.calls} 次），仍在繼續重複遞迴...`;
+      spokenNarration = `動態規劃已經率先完工，只用 ${ops} 次加法就求出 F ${N} 等於 ${dpArr[N]}！而左邊的純遞迴才剛算到一半，還在繼續重複呼叫。`;
+    } else if (t === maxLen - 1) {
+      displayHtml = `🏁 <b>對決結束！</b>計算 F(${N})：🟢 動態規劃僅需 <b>${ops} 次</b>運算（0 次重複）；🔴 純遞迴高達 <b>${rEv.calls} 次</b>函式呼叫（其中 <b>${rEv.dup} 次</b>為重複浪費）！`;
+      spokenNarration = `對決結束！同樣計算 F ${N}，動態規劃只花了 ${ops} 次加法，零次重複；而純遞迴卻呼叫了高達 ${rEv.calls} 次函式，其中有 ${rEv.dup} 次都是重複白做工！`;
+    } else {
+      displayHtml = `🟢 <b>動態規劃</b>：早已完成計算並待機中。<br>🔴 <b>純遞迴</b>：${rEv.speech}（累計重複浪費 ${rEv.dup} 次）`;
+      spokenNarration = rEv.speech;
+    }
+
+    combined.push({
+      rec: rEv,
+      dp: dEv,
+      treeMeta: { treeNodes, width, height },
+      displayHtml,
+      spokenNarration
+    });
+  }
+
+  return combined;
+}
+
+function renderRecTree(meta, rEv) {
+  const { treeNodes, width, height } = meta;
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="max-width:100%; height:auto;">`;
+
+  Object.values(treeNodes).forEach(nd => {
+    [nd.leftId, nd.rightId].forEach(cid => {
+      if (!cid) return;
+      const ch = treeNodes[cid];
+      if (rEv.statuses[cid] === 'hidden') return;
+      svg += `<line x1="${nd.x}" y1="${nd.y + 14}" x2="${ch.x}" y2="${ch.y - 14}" stroke="#475569" stroke-width="1.6" />`;
+    });
+  });
+
+  Object.values(treeNodes).forEach(nd => {
+    const st = rEv.statuses[nd.id];
+    if (st === 'hidden') return;
+    let fill = '#1e293b', stroke = '#64748b', txt = '#f8fafc', sw = 2;
+    if (nd.id === rEv.activeId && st === 'dup') {
+      fill = 'rgba(251, 191, 36, 0.35)'; stroke = '#fbbf24'; txt = '#fde68a'; sw = 3;
+    } else if (nd.id === rEv.activeId) {
+      fill = 'rgba(251, 113, 133, 0.35)'; stroke = '#fb7185'; txt = '#fff'; sw = 3;
+    } else if (st === 'dup') {
+      fill = 'rgba(251, 191, 36, 0.18)'; stroke = '#fbbf24'; txt = '#fde68a';
+    } else if (st === 'done') {
+      fill = 'rgba(56, 189, 248, 0.18)'; stroke = '#38bdf8'; txt = '#bae6fd';
+    }
+    svg += `<rect x="${nd.x - 21}" y="${nd.y - 14}" width="42" height="28" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />`;
+    svg += `<text x="${nd.x}" y="${nd.y + 5}" fill="${txt}" font-family="Consolas, monospace" font-size="13" font-weight="bold" text-anchor="middle">F(${nd.val})</text>`;
+  });
+
+  svg += `</svg>`;
+  document.getElementById('recTreeWrap').innerHTML = svg;
+}
+
+function render(shouldSpeak = true) {
+  const st = steps[cur];
+  document.getElementById('stepCounter').textContent = `步驟 ${cur + 1} / ${steps.length}`;
+  document.getElementById('prevBtn').disabled = cur === 0;
+  document.getElementById('nextBtn').disabled = cur === steps.length - 1;
+
+  document.querySelectorAll('#recCode .code-line').forEach(e => e.classList.remove('active-rec'));
+  const rEl = document.getElementById(`rline-${st.rec.line}`);
+  if (rEl) rEl.classList.add('active-rec');
+
+  document.querySelectorAll('#dpCode .code-line').forEach(e => e.classList.remove('active-dp'));
+  const dEl = document.getElementById(`dline-${st.dp.line}`);
+  if (dEl) dEl.classList.add('active-dp');
+
+  document.getElementById('recCalls').textContent = st.rec.calls;
+  document.getElementById('recDup').textContent = st.rec.dup;
+  document.getElementById('recDepth').textContent = st.rec.stack.length;
+  renderRecTree(st.treeMeta, st.rec);
+
+  const stackEl = document.getElementById('recStack');
+  stackEl.innerHTML = st.rec.stack.length
+    ? st.rec.stack.map(f => `<span class="stack-frame">${f}</span>`).join(' ➔ ')
+    : '<span style="color:#64748b;">(堆疊已清空)</span>';
+
+  document.getElementById('dpOps').textContent = st.dp.ops;
+  document.getElementById('dpNote').textContent = st.dp.note;
+  document.getElementById('dpArray').innerHTML = st.dp.dp.map((v, idx) => {
+    let cls = 'dp-cell';
+    if (idx === st.dp.target) cls += ' target';
+    else if (st.dp.sources.includes(idx)) cls += ' source';
+    else if (v !== null) cls += ' filled';
+    return `<div class="${cls}"><div class="dp-cell-idx">dp[${idx}]</div><div class="dp-cell-val">${v === null ? '-' : v}</div></div>`;
+  }).join('');
+
+  document.getElementById('explainBar').innerHTML = st.displayHtml;
+
+  if (shouldSpeak) {
+    speakText(st.spokenNarration, () => {
+      if (isPlaying) {
+        if (cur < steps.length - 1) {
+          cur++;
+          render(true);
+        } else {
+          stopPlay();
+        }
+      }
+    });
+  }
+}
+
+function initSim() {
+  stopPlay();
+  const N = parseInt(document.getElementById('nSelect').value, 10) || 5;
+  renderCodeBlocks();
+  steps = buildSimulation(N);
+  cur = 0;
+  render(false);
+}
+function nextStep() {
+  stopPlay();
+  if (cur < steps.length - 1) { cur++; render(true); }
+}
+function prevStep() {
+  stopPlay();
+  if (cur > 0) { cur--; render(true); }
+}
+function resetSim() {
+  stopPlay();
+  cur = 0;
+  render(true);
+}
+function togglePlay() {
+  if (isPlaying) {
+    stopPlay();
+  } else {
+    if (cur === steps.length - 1) cur = 0;
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸ 暫停播放';
+    render(true);
+  }
+}
+function stopPlay() {
+  isPlaying = false;
+  if (playTimeout) { clearTimeout(playTimeout); playTimeout = null; }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  document.getElementById('speakDot').classList.remove('active');
+  document.getElementById('playBtn').textContent = '▶ 自動播放';
+}
+document.addEventListener('keydown', e => { if (e.key === 'ArrowRight') nextStep(); if (e.key === 'ArrowLeft') prevStep(); });
+initSim();
+</script>
+</body>
+</html>

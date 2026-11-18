@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>16-2 0/1 背包問題 — 動態規劃二維填表與程式碼同步動畫</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --code-bg: #0b1120;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --cyan: #38bdf8;
+    --amber: #fbbf24;
+    --green: #34d399;
+    --purple: #c084fc;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    padding: 18px 24px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    padding: 14px 22px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .title-area h1 {
+    font-size: 26px;
+    color: var(--cyan);
+    margin-bottom: 4px;
+  }
+  .title-area p {
+    font-size: 16px;
+    color: var(--muted);
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button, select {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  select {
+    background: var(--code-bg);
+    color: var(--text);
+  }
+  .btn-nav {
+    background: #334155;
+    color: var(--text);
+  }
+  .btn-nav:hover:not(:disabled) { background: #475569; }
+  .btn-primary {
+    background: var(--cyan);
+    color: #0f172a;
+    border-color: var(--cyan);
+  }
+  .btn-primary:hover:not(:disabled) { background: #7dd3fc; }
+  .btn-play {
+    background: var(--green);
+    color: #0f172a;
+    border-color: var(--green);
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .step-badge {
+    font-size: 16px;
+    background: var(--code-bg);
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--amber);
+    font-weight: bold;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1.15fr;
+    gap: 16px;
+    flex: 1;
+  }
+  @media (max-width: 1100px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--cyan);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  /* Code Panel */
+  .code-container {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 10px 0;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 16px;
+    line-height: 1.65;
+    overflow-x: auto;
+    border: 1px solid #1e293b;
+  }
+  .code-line {
+    padding: 2px 14px;
+    display: flex;
+    white-space: pre;
+    border-left: 4px solid transparent;
+  }
+  .line-num {
+    color: #475569;
+    width: 32px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .code-line.active {
+    background: rgba(56, 189, 248, 0.18);
+    border-left-color: var(--amber);
+    color: #ffffff;
+    font-weight: bold;
+  }
+  .kw { color: #c084fc; }
+  .fn { color: #38bdf8; }
+  .cm { color: #64748b; }
+  .num { color: #fbbf24; }
+
+  /* Variables Watch */
+  .vars-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .var-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .var-name { font-size: 13px; color: var(--muted); font-family: Consolas, monospace; }
+  .var-val { font-size: 18px; font-weight: bold; color: var(--amber); margin-top: 2px; font-family: Consolas, monospace; }
+
+  /* DP Table */
+  .table-wrap {
+    overflow-x: auto;
+    padding: 4px;
+  }
+  table.dp-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    font-size: 18px;
+  }
+  .dp-table th, .dp-table td {
+    border: 1.5px solid var(--border);
+    padding: 11px 8px;
+    min-width: 92px;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .dp-table th {
+    background: #172554;
+    color: var(--cyan);
+    font-weight: bold;
+  }
+  .dp-table td.row-header {
+    background: #16213e;
+    text-align: left;
+    padding-left: 12px;
+    font-weight: bold;
+    min-width: 175px;
+    font-size: 16px;
+  }
+  .item-tag {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: normal;
+  }
+  .cell-val {
+    font-size: 20px;
+    font-weight: bold;
+    font-family: Consolas, monospace;
+  }
+  .cell-items {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Cell Highlight States */
+  .cell-target {
+    background: rgba(251, 191, 36, 0.25) !important;
+    border: 2.5px solid var(--amber) !important;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+  }
+  .cell-target .cell-val { color: var(--amber); }
+
+  .cell-up {
+    background: rgba(56, 189, 248, 0.22) !important;
+    border: 2px dashed var(--cyan) !important;
+  }
+  .cell-up .cell-val { color: var(--cyan); }
+
+  .cell-rem {
+    background: rgba(52, 211, 153, 0.22) !important;
+    border: 2px dashed var(--green) !important;
+  }
+  .cell-rem .cell-val { color: var(--green); }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    flex-wrap: wrap;
+  }
+  .leg-item { display: flex; align-items: center; gap: 6px; }
+  .leg-box { width: 16px; height: 16px; border-radius: 4px; }
+
+  /* Explanation Box */
+  .explain-box {
+    background: var(--code-bg);
+    border-left: 5px solid var(--amber);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 18px;
+    line-height: 1.55;
+    min-height: 128px;
+  }
+  .formula-compare {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 6px;
+    font-family: Consolas, "Microsoft JhengHei", monospace;
+    font-size: 16px;
+    color: var(--green);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-area">
+    <h1>16-2 0/1 背包問題 — 動態規劃二維填表動畫（ch16_3.py）</h1>
+    <p>同步對照 Python 程式碼執行行數與二維 DP 表格狀態轉移決策</p>
+  </div>
+  <div class="controls">
+    <select id="modeSelect" onchange="initSimulation()">
+      <option value="3items">範例 A：教材 3 件商品（筆電、音響、電視）</option>
+      <option value="4items" selected>範例 B：教材延伸 4 件商品（加入手機 P）</option>
+    </select>
+    <button class="btn-nav" onclick="resetSim()">⟲ 重置</button>
+    <button class="btn-nav" id="prevBtn" onclick="prevStep()">◀ 上一步</button>
+    <button class="btn-primary" id="nextBtn" onclick="nextStep()">下一步 ▶</button>
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶ 自動播放</button>
+    <div class="step-badge" id="stepCounter">步驟 0 / 0</div>
+  </div>
+</header>
+
+<div class="main-grid">
+  <!-- Left: Python Code + Variables -->
+  <div class="card">
+    <div class="card-title">
+      <span>Python 程式碼逐行追蹤（ch16_3.py）</span>
+      <span style="font-size:14px; color:var(--muted);">可用鍵盤 ← / → 方向鍵控制</span>
+    </div>
+    <div class="code-container" id="codeBox"></div>
+
+    <div class="card-title" style="margin-top:4px;">
+      <span>即時變數監控（Memory Watch）</span>
+    </div>
+    <div class="vars-grid">
+      <div class="var-box"><div class="var-name">列索引 r (商品)</div><div class="var-val" id="varR">-</div></div>
+      <div class="var-box"><div class="var-name">欄索引 c (限重)</div><div class="var-val" id="varC">-</div></div>
+      <div class="var-box"><div class="var-name">目前重量 wt[r-1]</div><div class="var-val" id="varWt">-</div></div>
+      <div class="var-box"><div class="var-name">目前價值 val[r-1]</div><div class="var-val" id="varVal">-</div></div>
+    </div>
+  </div>
+
+  <!-- Right: DP Table + Step Explanation -->
+  <div class="card">
+    <div class="card-title">
+      <span>DP 狀態表格 table[r][c]（背包限重 W = 4 公斤）</span>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(251,191,36,0.35); border:2px solid var(--amber);"></div>目前計算格</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(56,189,248,0.3); border:2px dashed var(--cyan);"></div>不放：正上方</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(52,211,153,0.3); border:2px dashed var(--green);"></div>放入：剩餘容量</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="dp-table" id="dpTable"></table>
+    </div>
+
+    <div class="explain-box" id="explainBox">
+      點擊「下一步」開始逐步演示動態規劃填表過程。
+    </div>
+  </div>
+</div>
+
+<script>
+const CODE_LINES = [
+  'def knapsack(W, wt, val):',
+  '    n = len(val)',
+  '    table = [[0 for x in range(W + 1)] for x in range(n + 1)]',
+  '    for r in range(n + 1):',
+  '        for c in range(W + 1):',
+  '            if r == 0 or c == 0:',
+  '                table[r][c] = 0',
+  '            elif wt[r - 1] <= c:',
+  '                table[r][c] = max(val[r - 1] + table[r - 1][c - wt[r - 1]], table[r - 1][c])',
+  '            else:',
+  '                table[r][c] = table[r - 1][c]',
+  '    return table[n][W]'
+];
+
+const DATASETS = {
+  '3items': {
+    W: 4,
+    items: [
+      { name: '筆電 (N)', short: 'N', wt: 1, val: 20000 },
+      { name: '音響 (S)', short: 'S', wt: 4, val: 50000 },
+      { name: '電視 (T)', short: 'T', wt: 3, val: 40000 }
+    ]
+  },
+  '4items': {
+    W: 4,
+    items: [
+      { name: '筆電 (N)', short: 'N', wt: 1, val: 20000 },
+      { name: '音響 (S)', short: 'S', wt: 4, val: 50000 },
+      { name: '電視 (T)', short: 'T', wt: 3, val: 40000 },
+      { name: '手機 (P)', short: 'P', wt: 1, val: 25000 }
+    ]
+  }
+};
+
+let steps = [];
+let currentStep = 0;
+let playTimer = null;
+
+function renderCode() {
+  const box = document.getElementById('codeBox');
+  box.innerHTML = CODE_LINES.map((line, idx) => {
+    let formatted = line
+      .replace(/(def|for|in|range|if|or|elif|else|return)/g, '<span class="kw">$1</span>')
+      .replace(/(knapsack|len|max)/g, '<span class="fn">$1</span>');
+    return `<div class="code-line" id="line-${idx + 1}"><span class="line-num">${idx + 1}</span><span>${formatted}</span></div>`;
+  }).join('');
+}
+
+function buildSteps(data) {
+  const W = data.W;
+  const items = data.items;
+  const n = items.length;
+  const simSteps = [];
+
+  // Deep copy helper
+  const cloneGrid = (g) => g.map(row => row.map(cell => ({ ...cell })));
+
+  // Initial empty grid (n+1) x (W+1)
+  let grid = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: W + 1 }, () => ({ val: null, combo: '', initialized: false }))
+  );
+
+  simSteps.push({
+    line: 3,
+    r: '-', c: '-', wt: '-', val: '-',
+    grid: cloneGrid(grid),
+    target: null, up: null, rem: null,
+    title: '步驟 1｜定義狀態與建立二維表格',
+    desc: `建立 (${n + 1}) × (${W + 1}) 的二維陣列 table[r][c]，代表「考慮前 r 件商品、背包限重 c 公斤」時的最大價值。`,
+    formula: '初始狀態：第 0 列（無商品）與第 0 欄（限重 0 公斤）皆初始化為 0'
+  });
+
+  // Initialize row 0 and col 0 together for clarity
+  for (let r = 0; r <= n; r++) {
+    for (let c = 0; c <= W; c++) {
+      if (r === 0 || c === 0) {
+        grid[r][c] = { val: 0, combo: '空', initialized: true };
+      }
+    }
+  }
+
+  simSteps.push({
+    line: 7,
+    r: 0, c: 0, wt: '-', val: '-',
+    grid: cloneGrid(grid),
+    target: null, up: null, rem: null,
+    title: '步驟 2｜邊界條件初始化（r == 0 或 c == 0）',
+    desc: '當沒有任何商品可選（r=0）或背包容量為 0（c=0）時，最大價值必為 0 元。',
+    formula: 'table[0][c] = 0 且 table[r][0] = 0'
+  });
+
+  // Iterate r = 1..n, c = 1..W
+  for (let r = 1; r <= n; r++) {
+    const item = items[r - 1];
+    for (let c = 1; c <= W; c++) {
+      if (item.wt <= c) {
+        const upCell = grid[r - 1][c];
+        const remCol = c - item.wt;
+        const remCell = grid[r - 1][remCol];
+        const takeVal = item.val + remCell.val;
+        const skipVal = upCell.val;
+
+        const chosenVal = Math.max(takeVal, skipVal);
+        let chosenCombo = '';
+        if (takeVal > skipVal) {
+          chosenCombo = remCell.combo && remCell.combo !== '空' ? `${remCell.combo}+${item.short}` : item.short;
+        } else {
+          chosenCombo = upCell.combo;
+        }
+
+        grid[r][c] = { val: chosenVal, combo: chosenCombo, initialized: true };
+
+        simSteps.push({
+          line: 9,
+          r, c, wt: `${item.wt} kg`, val: `${item.val.toLocaleString()}`,
+          grid: cloneGrid(grid),
+          target: [r, c],
+          up: [r - 1, c],
+          rem: [r - 1, remCol],
+          title: `考慮【${item.name}】，背包限重 c = ${c} 公斤（wt[${r-1}]=${item.wt} ≤ ${c}，裝得下！）`,
+          desc: `比較「不放${item.short}（看正上方）」與「放入${item.short} + 剩餘 ${remCol} 公斤最佳解」：`,
+          formula: `max( 放入: ${item.val.toLocaleString()} + ${remCell.val.toLocaleString()} = ${takeVal.toLocaleString()} , 不放: ${skipVal.toLocaleString()} ) ➔ 填入 ${chosenVal.toLocaleString()} (${chosenCombo})`
+        });
+      } else {
+        const upCell = grid[r - 1][c];
+        grid[r][c] = { val: upCell.val, combo: upCell.combo, initialized: true };
+
+        simSteps.push({
+          line: 11,
+          r, c, wt: `${item.wt} kg`, val: `${item.val.toLocaleString()}`,
+          grid: cloneGrid(grid),
+          target: [r, c],
+          up: [r - 1, c],
+          rem: null,
+          title: `考慮【${item.name}】，背包限重 c = ${c} 公斤（wt[${r-1}]=${item.wt} > ${c}，裝不下！）`,
+          desc: `${item.name}需要 ${item.wt} 公斤，超過目前背包容量 ${c} 公斤，直接繼承正上方 table[${r-1}][${c}] 的最佳價值。`,
+          formula: `table[${r}][${c}] = table[${r-1}][${c}] = ${upCell.val.toLocaleString()} (${upCell.combo})`
+        });
+      }
+    }
+  }
+
+  const finalCell = grid[n][W];
+  simSteps.push({
+    line: 12,
+    r: n, c: W, wt: '-', val: '-',
+    grid: cloneGrid(grid),
+    target: [n, W], up: null, rem: null,
+    title: '填表完成！回傳右下角最終最佳解 table[n][W]',
+    desc: `所有子問題皆已計算完畢，${W} 公斤背包可裝入的最大總價值為 ${finalCell.val.toLocaleString()} 元（組合：${finalCell.combo}）。`,
+    formula: `return table[${n}][${W}] ➔ ${finalCell.val.toLocaleString()} 元`
+  });
+
+  return simSteps;
+}
+
+function renderStep() {
+  const s = steps[currentStep];
+  const data = DATASETS[document.getElementById('modeSelect').value];
+
+  // Update counter & buttons
+  document.getElementById('stepCounter').textContent = `步驟 ${currentStep + 1} / ${steps.length}`;
+  document.getElementById('prevBtn').disabled = (currentStep === 0);
+  document.getElementById('nextBtn').disabled = (currentStep === steps.length - 1);
+
+  // Highlight code line
+  document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+  const activeLine = document.getElementById(`line-${s.line}`);
+  if (activeLine) activeLine.classList.add('active');
+
+  // Update variables
+  document.getElementById('varR').textContent = s.r;
+  document.getElementById('varC').textContent = s.c;
+  document.getElementById('varWt').textContent = s.wt;
+  document.getElementById('varVal').textContent = s.val;
+
+  // Render table
+  const tbl = document.getElementById('dpTable');
+  let html = '<thead><tr><th>商品 \ 限重 c</th>';
+  for (let c = 0; c <= data.W; c++) {
+    html += `<th>c = ${c}<br><span style="font-size:13px;font-weight:normal;color:#94a3b8;">(${c} 公斤)</span></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let r = 0; r <= data.items.length; r++) {
+    html += '<tr>';
+    if (r === 0) {
+      html += `<td class="row-header">r = 0 (無商品)<br><span class="item-tag">邊界初始列</span></td>`;
+    } else {
+      const it = data.items[r - 1];
+      html += `<td class="row-header">r = ${r}：${it.name}<br><span class="item-tag">重 ${it.wt}kg｜價值 ${it.val.toLocaleString()}</span></td>`;
+    }
+
+    for (let c = 0; c <= data.W; c++) {
+      const cell = s.grid[r][c];
+      let cls = '';
+      if (s.target && s.target[0] === r && s.target[1] === c) cls = 'cell-target';
+      else if (s.up && s.up[0] === r && s.up[1] === c) cls = 'cell-up';
+      else if (s.rem && s.rem[0] === r && s.rem[1] === c) cls = 'cell-rem';
+
+      const displayVal = cell.val === null ? '-' : cell.val.toLocaleString();
+      const displayCombo = cell.combo ? `(${cell.combo})` : '';
+      html += `<td class="${cls}"><div class="cell-val">${displayVal}</div><div class="cell-items">${displayCombo}</div></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+
+  // Explanation
+  document.getElementById('explainBox').innerHTML = `
+    <div style="font-weight:bold; color:var(--amber); margin-bottom:4px;">${s.title}</div>
+    <div>${s.desc}</div>
+    <div class="formula-compare">${s.formula}</div>
+  `;
+}
+
+function initSimulation() {
+  stopPlay();
+  const mode = document.getElementById('modeSelect').value;
+  steps = buildSteps(DATASETS[mode]);
+  currentStep = 0;
+  renderStep();
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) {
+    currentStep++;
+    renderStep();
+  } else {
+    stopPlay();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) {
+    currentStep--;
+    renderStep();
+  }
+}
+
+function resetSim() {
+  stopPlay();
+  currentStep = 0;
+  renderStep();
+}
+
+function togglePlay() {
+  if (playTimer) {
+    stopPlay();
+  } else {
+    if (currentStep === steps.length - 1) currentStep = 0;
+    document.getElementById('playBtn').textContent = '⏸ 暫停播放';
+    playTimer = setInterval(() => {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderStep();
+      } else {
+        stopPlay();
+      }
+    }, 1500);
+  }
+}
+
+function stopPlay() {
+  if (playTimer) {
+    clearInterval(playTimer);
+    playTimer = null;
+  }
+  document.getElementById('playBtn').textContent = '▶ 自動播放';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') nextStep();
+  if (e.key === 'ArrowLeft') prevStep();
+});
+
+renderCode();
+initSimulation();
+</script>
+</body>
+</html>

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>16-3 ＆ 16-4 旅遊行程安排與挖金礦問題 — 動態規劃同步教學動畫</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --code-bg: #0b1120;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --cyan: #38bdf8;
+    --amber: #fbbf24;
+    --green: #34d399;
+    --purple: #c084fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    padding: 16px 22px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .title-area h1 { font-size: 24px; color: var(--green); margin-bottom: 4px; }
+  .title-area p { font-size: 15px; color: var(--muted); }
+  .controls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  button, select {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  select { background: var(--code-bg); color: var(--text); }
+  .btn-nav { background: #334155; color: var(--text); }
+  .btn-nav:hover:not(:disabled) { background: #475569; }
+  .btn-primary { background: var(--cyan); color: #0f172a; border-color: var(--cyan); }
+  .btn-primary:hover:not(:disabled) { background: #7dd3fc; }
+  .btn-play { background: var(--green); color: #0f172a; border-color: var(--green); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .step-badge {
+    font-size: 15px;
+    background: var(--code-bg);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--amber);
+    font-weight: bold;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 0.95fr 1.25fr;
+    gap: 16px;
+    flex: 1;
+  }
+  @media (max-width: 1150px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card-title {
+    font-size: 19px;
+    font-weight: bold;
+    color: var(--cyan);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  .code-container {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 10px 0;
+    font-family: "Consolas", monospace;
+    font-size: 15px;
+    line-height: 1.62;
+    overflow-x: auto;
+    border: 1px solid #1e293b;
+  }
+  .code-line {
+    padding: 2px 12px;
+    display: flex;
+    white-space: pre;
+    border-left: 4px solid transparent;
+  }
+  .line-num { color: #475569; width: 30px; user-select: none; flex-shrink: 0; }
+  .code-line.active {
+    background: rgba(52, 211, 153, 0.18);
+    border-left-color: var(--amber);
+    color: #ffffff;
+    font-weight: bold;
+  }
+  .kw { color: #c084fc; }
+  .fn { color: #38bdf8; }
+
+  .vars-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .var-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+  .var-name { font-size: 12px; color: var(--muted); font-family: Consolas, monospace; }
+  .var-val { font-size: 17px; font-weight: bold; color: var(--amber); margin-top: 2px; font-family: Consolas, monospace; }
+
+  .table-wrap { overflow-x: auto; padding: 2px; }
+  table.dp-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    font-size: 16px;
+  }
+  .dp-table th, .dp-table td {
+    border: 1.5px solid var(--border);
+    padding: 8px 5px;
+    min-width: 58px;
+    transition: all 0.2s;
+  }
+  .dp-table th { background: #172554; color: var(--cyan); font-weight: bold; font-size: 15px; }
+  .dp-table td.row-header {
+    background: #16213e;
+    text-align: left;
+    padding-left: 10px;
+    font-weight: bold;
+    min-width: 148px;
+    font-size: 14px;
+  }
+  .item-tag { display: block; font-size: 12px; color: var(--muted); font-weight: normal; }
+  .cell-val { font-size: 17px; font-weight: bold; font-family: Consolas, monospace; }
+  .cell-items { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .cell-target {
+    background: rgba(251, 191, 36, 0.28) !important;
+    border: 2.5px solid var(--amber) !important;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+  }
+  .cell-target .cell-val { color: var(--amber); }
+
+  .cell-up {
+    background: rgba(56, 189, 248, 0.22) !important;
+    border: 2px dashed var(--cyan) !important;
+  }
+  .cell-up .cell-val { color: var(--cyan); }
+
+  .cell-rem {
+    background: rgba(52, 211, 153, 0.24) !important;
+    border: 2px dashed var(--green) !important;
+  }
+  .cell-rem .cell-val { color: var(--green); }
+
+  .legend { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-box { width: 14px; height: 14px; border-radius: 3px; }
+
+  .explain-box {
+    background: var(--code-bg);
+    border-left: 5px solid var(--green);
+    border-radius: 8px;
+    padding: 13px 15px;
+    font-size: 17px;
+    line-height: 1.5;
+    min-height: 120px;
+  }
+  .formula-compare {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(30, 41, 59, 0.85);
+    border-radius: 6px;
+    font-family: Consolas, "Microsoft JhengHei", monospace;
+    font-size: 15px;
+    color: var(--amber);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-area">
+    <h1 id="mainHeading">16-3 旅遊行程安排 — 動態規劃二維填表動畫（ch16_4.py）</h1>
+    <p id="subHeading">將 0.5 天時間單位乘 2 整數化，套用 0/1 背包模型求最高點評總分</p>
+  </div>
+  <div class="controls">
+    <select id="modeSelect" onchange="initSimulation()">
+      <option value="travel" selected>16-3 旅遊行程安排（ch16_4.py｜北京 2 日遊）</option>
+      <option value="gold">16-4 挖金礦問題（ch16_5.py｜10 人力 5 座礦山）</option>
+    </select>
+    <button class="btn-nav" onclick="resetSim()">⟲ 重置</button>
+    <button class="btn-nav" id="prevBtn" onclick="prevStep()">◀ 上一步</button>
+    <button class="btn-primary" id="nextBtn" onclick="nextStep()">下一步 ▶</button>
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶ 自動播放</button>
+    <div class="step-badge" id="stepCounter">步驟 0 / 0</div>
+  </div>
+</header>
+
+<div class="main-grid">
+  <div class="card">
+    <div class="card-title">
+      <span id="codeTitle">Python 程式碼逐行追蹤（ch16_4.py）</span>
+      <span style="font-size:13px; color:var(--muted);">支援鍵盤 ← / → 切換</span>
+    </div>
+    <div class="code-container" id="codeBox"></div>
+
+    <div class="card-title" style="margin-top:2px;">
+      <span>即時變數監控（Memory Watch）</span>
+    </div>
+    <div class="vars-grid">
+      <div class="var-box"><div class="var-name">列索引 r (項目)</div><div class="var-val" id="varR">-</div></div>
+      <div class="var-box"><div class="var-name" id="lblVarC">欄索引 c (容量)</div><div class="var-val" id="varC">-</div></div>
+      <div class="var-box"><div class="var-name" id="lblVarWt">消耗成本 wt[r-1]</div><div class="var-val" id="varWt">-</div></div>
+      <div class="var-box"><div class="var-name" id="lblVarVal">獲得收益 val[r-1]</div><div class="var-val" id="varVal">-</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span id="tableTitle">DP 狀態表格 table[r][c]</span>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(251,191,36,0.35); border:2px solid var(--amber);"></div>目前格</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(56,189,248,0.3); border:2px dashed var(--cyan);"></div>不選：正上方</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(52,211,153,0.3); border:2px dashed var(--green);"></div>選取：剩餘容量</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="dp-table" id="dpTable"></table>
+    </div>
+
+    <div class="explain-box" id="explainBox">
+      點擊「下一步」開始逐步演示動態規劃填表過程。
+    </div>
+  </div>
+</div>
+
+<script>
+const SCENARIOS = {
+  travel: {
+    heading: '16-3 旅遊行程安排 — 動態規劃二維填表動畫（ch16_4.py）',
+    sub: '將 0.5 天時間單位乘 2 整數化（W = 4 單位），套用 0/1 背包模型求最高點評總分',
+    codeTitle: 'Python 程式碼逐行追蹤（ch16_4.py）',
+    tableTitle: 'DP 狀態表格 table[r][c]（總時間 W = 4 單位 ＝ 2 天）',
+    funcName: 'traveling',
+    W: 4,
+    unitName: '單位',
+    valUnit: '分',
+    colHeaders: (c) => `c=${c}<br><span style="font-size:12px;font-weight:normal;color:#94a3b8;">(${c*0.5}天)</span>`,
+    rowHeaderLabel: '景點 \ 時間',
+    items: [
+      { name: '頤和園', short: '頤', wt: 1, val: 7, note: '0.5天(1單位)｜7分' },
+      { name: '天壇', short: '天', wt: 1, val: 6, note: '0.5天(1單位)｜6分' },
+      { name: '故宮', short: '故', wt: 2, val: 9, note: '1.0天(2單位)｜9分' },
+      { name: '萬里長城', short: '長', wt: 4, val: 9, note: '2.0天(4單位)｜9分' },
+      { name: '圓明園', short: '圓', wt: 1, val: 8, note: '0.5天(1單位)｜8分' }
+    ],
+    extraCode: [
+      'value = [7, 6, 9, 9, 8]',
+      'weight = [1, 1, 2, 4, 1]',
+      'travel_weight = 4',
+      "print('旅遊點評總分=', traveling(travel_weight, weight, value))"
+    ]
+  },
+  gold: {
+    heading: '16-4 挖金礦問題 — 動態規劃二維填表動畫（ch16_5.py）',
+    sub: '總人力 W = 10 人調配至 5 座金礦，求每日最大黃金產值（公斤）',
+    codeTitle: 'Python 程式碼逐行追蹤（ch16_5.py）',
+    tableTitle: 'DP 狀態表格 table[r][c]（總人力 W = 10 人）',
+    funcName: 'gold',
+    W: 10,
+    unitName: '人',
+    valUnit: '公斤',
+    colHeaders: (c) => `${c}人`,
+    rowHeaderLabel: '礦山 \ 人力',
+    items: [
+      { name: '礦山 A', short: 'A', wt: 3, val: 10, note: '3人｜10kg' },
+      { name: '礦山 B', short: 'B', wt: 4, val: 16, note: '4人｜16kg' },
+      { name: '礦山 C', short: 'C', wt: 3, val: 20, note: '3人｜20kg' },
+      { name: '礦山 D', short: 'D', wt: 5, val: 22, note: '5人｜22kg' },
+      { name: '礦山 E', short: 'E', wt: 5, val: 25, note: '5人｜25kg' }
+    ],
+    extraCode: [
+      'value = [10, 16, 20, 22, 25]',
+      'weight = [3, 4, 3, 5, 5]',
+      'gold_weight = 10',
+      "print(f'最大產值= {gold(gold_weight, weight, value)}公斤')"
+    ]
+  }
+};
+
+let steps = [];
+let currentStep = 0;
+let playTimer = null;
+
+function getCodeLines(sc) {
+  return [
+    `def ${sc.funcName}(W, wt, val):`,
+    '    n = len(val)',
+    '    table = [[0 for x in range(W + 1)] for x in range(n + 1)]',
+    '    for r in range(n + 1):',
+    '        for c in range(W + 1):',
+    '            if r == 0 or c == 0:',
+    '                table[r][c] = 0',
+    '            elif wt[r - 1] <= c:',
+    '                table[r][c] = max(val[r - 1] + table[r - 1][c - wt[r - 1]], table[r - 1][c])',
+    '            else:',
+    '                table[r][c] = table[r - 1][c]',
+    '    return table[n][W]',
+    ...sc.extraCode
+  ];
+}
+
+function renderCode(sc) {
+  const lines = getCodeLines(sc);
+  const box = document.getElementById('codeBox');
+  box.innerHTML = lines.map((line, idx) => {
+    let formatted = line
+      .replace(/(def|for|in|range|if|or|elif|else|return)/g, '<span class="kw">$1</span>')
+      .replace(new RegExp(`(${sc.funcName}|len|max|print)`, 'g'), '<span class="fn">$1</span>');
+    return `<div class="code-line" id="line-${idx + 1}"><span class="line-num">${idx + 1}</span><span>${formatted}</span></div>`;
+  }).join('');
+}
+
+function buildSteps(sc) {
+  const W = sc.W;
+  const items = sc.items;
+  const n = items.length;
+  const simSteps = [];
+  const cloneGrid = (g) => g.map(row => row.map(cell => ({ ...cell })));
+
+  let grid = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: W + 1 }, () => ({ val: null, combo: '' }))
+  );
+
+  simSteps.push({
+    line: 3, r: '-', c: '-', wt: '-', val: '-',
+    grid: cloneGrid(grid), target: null, up: null, rem: null,
+    title: '步驟 1｜定義狀態與建立二維表格',
+    desc: `建立 (${n + 1}) × (${W + 1}) 的二維陣列 table[r][c]，結構與 0/1 背包完全相同。`,
+    formula: `table = [[0] * ${W + 1} for _ in range(${n + 1})]`
+  });
+
+  for (let r = 0; r <= n; r++) {
+    for (let c = 0; c <= W; c++) {
+      if (r === 0 || c === 0) grid[r][c] = { val: 0, combo: '空' };
+    }
+  }
+
+  simSteps.push({
+    line: 7, r: 0, c: 0, wt: '-', val: '-',
+    grid: cloneGrid(grid), target: null, up: null, rem: null,
+    title: '步驟 2｜邊界條件初始化（r == 0 或 c == 0）',
+    desc: `沒有任何項目（r=0）或可用資源為 0（c=0）時，收益皆為 0 ${sc.valUnit}。`,
+    formula: 'table[0][c] = 0 且 table[r][0] = 0'
+  });
+
+  for (let r = 1; r <= n; r++) {
+    const item = items[r - 1];
+    for (let c = 1; c <= W; c++) {
+      if (item.wt <= c) {
+        const upCell = grid[r - 1][c];
+        const remCol = c - item.wt;
+        const remCell = grid[r - 1][remCol];
+        const takeVal = item.val + remCell.val;
+        const skipVal = upCell.val;
+        const chosenVal = Math.max(takeVal, skipVal);
+        let chosenCombo = takeVal > skipVal
+          ? (remCell.combo && remCell.combo !== '空' ? `${remCell.combo}+${item.short}` : item.short)
+          : upCell.combo;
+
+        grid[r][c] = { val: chosenVal, combo: chosenCombo };
+
+        simSteps.push({
+          line: 9, r, c, wt: `${item.wt}${sc.unitName}`, val: `${item.val}${sc.valUnit}`,
+          grid: cloneGrid(grid), target: [r, c], up: [r - 1, c], rem: [r - 1, remCol],
+          title: `考慮【${item.name}】，目前可用資源 c = ${c}${sc.unitName}（需 ${item.wt}${sc.unitName} ≤ ${c}，可行！）`,
+          desc: `比較「不選${item.short}（看正上方）」與「選取${item.short} + 剩餘 ${remCol}${sc.unitName}最佳解」：`,
+          formula: `max( 選取: ${item.val} + ${remCell.val} = ${takeVal} , 不選: ${skipVal} ) ➔ 填入 ${chosenVal}${sc.valUnit} (${chosenCombo})`
+        });
+      } else {
+        const upCell = grid[r - 1][c];
+        grid[r][c] = { val: upCell.val, combo: upCell.combo };
+
+        simSteps.push({
+          line: 11, r, c, wt: `${item.wt}${sc.unitName}`, val: `${item.val}${sc.valUnit}`,
+          grid: cloneGrid(grid), target: [r, c], up: [r - 1, c], rem: null,
+          title: `考慮【${item.name}】，目前可用資源 c = ${c}${sc.unitName}（需 ${item.wt}${sc.unitName} > ${c}，資源不足）`,
+          desc: `${item.name}需要 ${item.wt}${sc.unitName}，超過目前可用 ${c}${sc.unitName}，直接沿用正上方 table[${r-1}][${c}]。`,
+          formula: `table[${r}][${c}] = table[${r-1}][${c}] = ${upCell.val}${sc.valUnit} (${upCell.combo})`
+        });
+      }
+    }
+  }
+
+  const finalCell = grid[n][W];
+  simSteps.push({
+    line: 12, r: n, c: W, wt: '-', val: '-',
+    grid: cloneGrid(grid), target: [n, W], up: null, rem: null,
+    title: '填表完成！回傳右下角最終最佳解 table[n][W]',
+    desc: `最佳組合為【${finalCell.combo}】，最高總收益為 ${finalCell.val} ${sc.valUnit}！`,
+    formula: `return table[${n}][${W}] ➔ ${finalCell.val} ${sc.valUnit}`
+  });
+
+  return simSteps;
+}
+
+function renderStep() {
+  const mode = document.getElementById('modeSelect').value;
+  const sc = SCENARIOS[mode];
+  const s = steps[currentStep];
+
+  document.getElementById('stepCounter').textContent = `步驟 ${currentStep + 1} / ${steps.length}`;
+  document.getElementById('prevBtn').disabled = (currentStep === 0);
+  document.getElementById('nextBtn').disabled = (currentStep === steps.length - 1);
+
+  document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+  const activeLine = document.getElementById(`line-${s.line}`);
+  if (activeLine) activeLine.classList.add('active');
+
+  document.getElementById('varR').textContent = s.r;
+  document.getElementById('varC').textContent = s.c;
+  document.getElementById('varWt').textContent = s.wt;
+  document.getElementById('varVal').textContent = s.val;
+
+  const tbl = document.getElementById('dpTable');
+  let html = `<thead><tr><th>${sc.rowHeaderLabel}</th>`;
+  for (let c = 0; c <= sc.W; c++) {
+    html += `<th>${sc.colHeaders(c)}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let r = 0; r <= sc.items.length; r++) {
+    html += '<tr>';
+    if (r === 0) {
+      html += `<td class="row-header">r=0 (無項目)<span class="item-tag">邊界初始列</span></td>`;
+    } else {
+      const it = sc.items[r - 1];
+      html += `<td class="row-header">r=${r}：${it.name}<span class="item-tag">${it.note}</span></td>`;
+    }
+
+    for (let c = 0; c <= sc.W; c++) {
+      const cell = s.grid[r][c];
+      let cls = '';
+      if (s.target && s.target[0] === r && s.target[1] === c) cls = 'cell-target';
+      else if (s.up && s.up[0] === r && s.up[1] === c) cls = 'cell-up';
+      else if (s.rem && s.rem[0] === r && s.rem[1] === c) cls = 'cell-rem';
+
+      const displayVal = cell.val === null ? '-' : cell.val;
+      const displayCombo = cell.combo ? `(${cell.combo})` : '';
+      html += `<td class="${cls}"><div class="cell-val">${displayVal}</div><div class="cell-items">${displayCombo}</div></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+
+  document.getElementById('explainBox').innerHTML = `
+    <div style="font-weight:bold; color:var(--green); margin-bottom:4px;">${s.title}</div>
+    <div>${s.desc}</div>
+    <div class="formula-compare">${s.formula}</div>
+  `;
+}
+
+function initSimulation() {
+  stopPlay();
+  const mode = document.getElementById('modeSelect').value;
+  const sc = SCENARIOS[mode];
+  document.getElementById('mainHeading').textContent = sc.heading;
+  document.getElementById('subHeading').textContent = sc.sub;
+  document.getElementById('codeTitle').textContent = sc.codeTitle;
+  document.getElementById('tableTitle').textContent = sc.tableTitle;
+  renderCode(sc);
+  steps = buildSteps(sc);
+  currentStep = 0;
+  renderStep();
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) { currentStep++; renderStep(); }
+  else { stopPlay(); }
+}
+function prevStep() {
+  if (currentStep > 0) { currentStep--; renderStep(); }
+}
+function resetSim() {
+  stopPlay(); currentStep = 0; renderStep();
+}
+function togglePlay() {
+  if (playTimer) { stopPlay(); }
+  else {
+    if (currentStep === steps.length - 1) currentStep = 0;
+    document.getElementById('playBtn').textContent = '⏸ 暫停播放';
+    playTimer = setInterval(() => {
+      if (currentStep < steps.length - 1) { currentStep++; renderStep(); }
+      else { stopPlay(); }
+    }, 1300);
+  }
+}
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  document.getElementById('playBtn').textContent = '▶ 自動播放';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') nextStep();
+  if (e.key === 'ArrowLeft') prevStep();
+});
+
+initSimulation();
+</script>
+</body>
+</html>

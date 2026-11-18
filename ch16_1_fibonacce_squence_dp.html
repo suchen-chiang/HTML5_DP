@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>第16章 16-1 費波納契數列 — 動態規劃互動演示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* 全局字體與高對比深色教室投影優化 */
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #0b1120; /* 深藍灰護眼底色 */
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+
+    .code-font {
+      font-family: 'Fira Code', monospace;
+    }
+
+    /* 程式碼高亮光條 */
+    .code-line {
+      transition: background-color 0.25s ease, border-left-color 0.25s ease, transform 0.2s ease;
+      border-left: 5px solid transparent;
+    }
+    .code-line-active {
+      background-color: rgba(56, 189, 248, 0.22);
+      border-left-color: #38bdf8;
+      box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.15);
+    }
+
+    /* DP 表格儲存格動畫 */
+    .dp-cell {
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .dp-cell-target {
+      background-color: rgba(250, 204, 21, 0.22) !important;
+      border-color: #facc15 !important;
+      color: #fef08a !important;
+      transform: scale(1.08);
+      box-shadow: 0 0 24px rgba(250, 204, 21, 0.45);
+      z-index: 10;
+    }
+    .dp-cell-source1 {
+      background-color: rgba(56, 189, 248, 0.22) !important;
+      border-color: #38bdf8 !important;
+      color: #bae6fd !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+    }
+    .dp-cell-source2 {
+      background-color: rgba(168, 85, 247, 0.24) !important;
+      border-color: #c084fc !important;
+      color: #e9d5ff !important;
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.35);
+    }
+    .dp-cell-filled {
+      background-color: rgba(30, 41, 59, 0.95);
+      border-color: #475569;
+      color: #f1f5f9;
+    }
+
+    /* SVG 箭頭動畫 */
+    @keyframes dashFlow {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    .arrow-animated {
+      stroke-dasharray: 8 4;
+      animation: dashFlow 0.8s linear infinite;
+    }
+
+    /* 自訂捲軸 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-6 select-none">
+
+  <!-- 頂部標題與控制列 -->
+  <header class="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 md:px-6 md:py-4 shadow-xl mb-4">
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+      <!-- 章節主標題 (30px - 32px) -->
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="px-3 py-1 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-300 font-bold text-lg tracking-wider">
+            第 16 章 動態規劃演算法
+          </span>
+          <span class="text-slate-400 text-lg font-medium">16-1 思維與步驟</span>
+        </div>
+        <h1 class="text-2xl md:text-[32px] font-black text-white tracking-tight mt-1 leading-tight">
+          費波納契數列（Fibonacci Sequence）— DP 填表與程式執行演示
+        </h1>
+      </div>
+
+      <!-- 互動控制區 -->
+      <div class="flex flex-wrap items-center gap-3 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+        <!-- 設定 n 值 -->
+        <div class="flex items-center gap-2 pr-2 border-r border-slate-700">
+          <label for="input-n" class="text-xl font-bold text-slate-200">輸入 n =</label>
+          <input
+            id="input-n"
+            type="number"
+            min="2"
+            max="10"
+            value="6"
+            class="w-20 text-center text-2xl font-bold bg-slate-800 border-2 border-sky-500/60 focus:border-sky-400 rounded-lg py-1 text-yellow-300 outline-none"
+          />
+          <button
+            id="btn-apply"
+            class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 active:scale-95 text-white font-bold text-lg rounded-lg transition cursor-pointer"
+            title="套用新的 n 值"
+          >
+            套用
+          </button>
+        </div>
+
+        <!-- 步驟導覽按鈕 -->
+        <button
+          id="btn-reset"
+          class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-xl rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+        >
+          <span>↺</span> 重置
+        </button>
+
+        <button
+          id="btn-prev"
+          class="px-4 py-2 bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xl rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+        >
+          <span>◀</span> 上一步
+        </button>
+
+        <button
+          id="btn-next"
+          class="px-5 py-2 bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:pointer-events-none text-slate-950 font-black text-xl rounded-xl shadow-lg shadow-sky-500/25 transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+        >
+          下一步 <span>▶</span>
+        </button>
+
+        <button
+          id="btn-auto"
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1.5 min-w-[140px] justify-center"
+        >
+          <span id="auto-icon">▶</span> <span id="auto-text">自動播放</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 中央雙欄主體區 -->
+  <main class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-grow">
+
+    <!-- 左欄 (5/12)：教材 Python 程式碼與即時變數狀態 -->
+    <section class="lg:col-span-5 flex flex-col gap-4">
+      <!-- 程式碼面板 -->
+      <div class="bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 md:p-5 shadow-xl flex-grow flex flex-col">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-rose-500"></span>
+            <span class="w-3.5 h-3.5 rounded-full bg-amber-400"></span>
+            <span class="w-3.5 h-3.5 rounded-full bg-emerald-500"></span>
+            <span class="ml-2 text-xl font-bold text-sky-300 code-font">ch16_1.py</span>
+          </div>
+          <span class="text-base text-slate-400 font-medium">教材程式逐行追蹤</span>
+        </div>
+
+        <!-- 程式碼行列表 (字體 20px-22px) -->
+        <div id="code-container" class="code-font text-[19px] xl:text-[21px] leading-relaxed space-y-1 overflow-x-auto flex-grow">
+          <!-- 由 JS 動態渲染程式碼行 -->
+        </div>
+      </div>
+
+      <!-- 即時變數監控面板 -->
+      <div class="bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 md:p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-bold text-amber-300 flex items-center gap-2">
+            <span>📊</span> 目前記憶體變數狀態
+          </h2>
+          <span id="step-counter" class="text-lg font-bold px-3 py-0.5 rounded-full bg-slate-800 text-slate-300">
+            步驟 0 / 0
+          </span>
+        </div>
+        <div class="grid grid-cols-5 gap-2 text-center code-font">
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-base text-slate-400 mb-1">目標 n</div>
+            <div id="var-n" class="text-2xl font-bold text-white">6</div>
+          </div>
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-base text-slate-400 mb-1">迴圈 i</div>
+            <div id="var-i" class="text-2xl font-bold text-emerald-400">-</div>
+          </div>
+          <div class="bg-slate-950/90 border border-sky-800/60 rounded-xl p-2.5">
+            <div class="text-base text-sky-400 mb-1">dp[i-1]</div>
+            <div id="var-prev1" class="text-2xl font-bold text-sky-300">-</div>
+          </div>
+          <div class="bg-slate-950/90 border border-purple-800/60 rounded-xl p-2.5">
+            <div class="text-base text-purple-400 mb-1">dp[i-2]</div>
+            <div id="var-prev2" class="text-2xl font-bold text-purple-300">-</div>
+          </div>
+          <div class="bg-slate-950/90 border border-yellow-700/60 rounded-xl p-2.5">
+            <div class="text-base text-yellow-400 mb-1">dp[i]</div>
+            <div id="var-curr" class="text-2xl font-bold text-yellow-300">-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右欄 (7/12)：DP 陣列視覺化表格 + SVG 狀態轉移箭頭 + DP 四部曲白話解說 -->
+    <section class="lg:col-span-7 flex flex-col gap-4">
+
+      <!-- DP 表格與轉移視覺區 -->
+      <div class="bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 md:p-6 shadow-xl flex-grow flex flex-col justify-between relative">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <span>🧮</span> DP 狀態表格（記憶化陣列 <code class="code-font text-sky-300">dp</code>）
+          </h2>
+          <!-- 圖例說明 -->
+          <div class="flex flex-wrap items-center gap-4 text-lg">
+            <span class="flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded bg-purple-500/40 border-2 border-purple-400 inline-block"></span>
+              <span class="text-purple-200 font-medium">dp[i-2]</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded bg-sky-500/40 border-2 border-sky-400 inline-block"></span>
+              <span class="text-sky-200 font-medium">dp[i-1]</span>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded bg-yellow-400/40 border-2 border-yellow-400 inline-block"></span>
+              <span class="text-yellow-200 font-medium">目前計算 dp[i]</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 狀態轉移公式算式即時看板 -->
+        <div id="formula-banner" class="my-2 py-3 px-4 rounded-xl bg-slate-950/90 border border-slate-800 text-center min-h-[64px] flex items-center justify-center">
+          <span class="text-xl md:text-2xl code-font text-slate-300">準備開始執行程式...</span>
+        </div>
+
+        <!-- DP 表格 + 上方 SVG 曲線箭頭容器 -->
+        <div id="table-wrapper" class="relative w-full overflow-x-auto py-4 flex flex-col items-center justify-center my-auto">
+          <!-- SVG 箭頭畫布 (覆蓋在表格上方) -->
+          <svg id="arrow-svg" class="w-full h-24 pointer-events-none overflow-visible mb-1">
+            <defs>
+              <marker id="arrowhead-sky" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#38bdf8" />
+              </marker>
+              <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#c084fc" />
+              </marker>
+            </defs>
+            <g id="arrow-layer"></g>
+          </svg>
+
+          <!-- 動態產生的 DP 表格 -->
+          <div id="dp-grid" class="w-full grid gap-2 px-1">
+            <!-- 由 JS 動態填入每一欄 -->
+          </div>
+        </div>
+
+        <!-- 執行結果輸出框 -->
+        <div id="output-box" class="mt-3 bg-black/70 border border-slate-700 rounded-xl p-3.5 code-font text-xl flex items-center gap-3">
+          <span class="text-emerald-400 font-bold shrink-0">執行結果 &gt;</span>
+          <span id="console-output" class="text-slate-400">尚未執行到 print() 輸出結果</span>
+        </div>
+      </div>
+
+      <!-- 底部：DP 四部曲步驟白話解說區 (字體 22px-24px) -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-sky-950/60 border-2 border-sky-500/40 rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-wrap items-center gap-3 mb-2">
+          <span id="stage-badge" class="px-3.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-xl tracking-wide">
+            準備階段
+          </span>
+          <h3 id="stage-title" class="text-2xl font-bold text-sky-300">
+            點擊「下一步」或「自動播放」開始追蹤演算法
+          </h3>
+        </div>
+        <p id="stage-desc" class="text-[22px] md:text-[24px] text-slate-100 leading-relaxed font-normal">
+          本範例展示如何利用一維陣列 <code class="code-font text-yellow-300 bg-slate-800 px-2 py-0.5 rounded">dp</code> 儲存已經計算過的費波納契數值，避免傳統遞迴重複計算重疊子問題，將時間複雜度大幅降低為 <span class="text-emerald-300 font-bold">O(n)</span>。
+        </p>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    /**
+     * 教材 ch16_1.py 完整程式碼定義（保留教材結構與註解，方便課堂對照）
+     */
+    const CODE_LINES = [
+      { lineNo: 1,  text: '# ch16_1.py', indent: 0, isComment: true },
+      { lineNo: 2,  text: 'def fibonacci(n):', indent: 0 },
+      { lineNo: 3,  text: '    if n <= 1:', indent: 1 },
+      { lineNo: 4,  text: '        return n', indent: 2 },
+      { lineNo: 5,  text: '    # 步驟1：定義狀態，建立大小為 n+1 的陣列 dp', indent: 1, isComment: true },
+      { lineNo: 6,  text: '    dp = [0] * (n + 1)', indent: 1 },
+      { lineNo: 7,  text: '    # 步驟3：初始化基礎狀態 dp[0] 與 dp[1]', indent: 1, isComment: true },
+      { lineNo: 8,  text: '    dp[0] = 0', indent: 1 },
+      { lineNo: 9,  text: '    dp[1] = 1', indent: 1 },
+      { lineNo: 10, text: '    # 步驟4：計算順序（從 2 到 n 逐步填表）', indent: 1, isComment: true },
+      { lineNo: 11, text: '    for i in range(2, n + 1):', indent: 1 },
+      { lineNo: 12, text: '        # 步驟2：狀態轉移方程', indent: 2, isComment: true },
+      { lineNo: 13, text: '        dp[i] = dp[i - 1] + dp[i - 2]', indent: 2 },
+      { lineNo: 14, text: '    return dp[n]', indent: 1 },
+      { lineNo: 15, text: '', indent: 0 },
+      { lineNo: 16, text: 'n = 6  # 輸入正整數', indent: 0 },
+      { lineNo: 17, text: 'print(f"第{n}個費波那契數列的值是：{fibonacci(n)}")', indent: 0 }
+    ];
+
+    // 狀態管理
+    let currentN = 6;
+    let steps = [];
+    let currentStepIdx = 0;
+    let autoTimer = null;
+
+    // DOM 元素快取
+    const codeContainer = document.getElementById('code-container');
+    const dpGrid = document.getElementById('dp-grid');
+    const arrowLayer = document.getElementById('arrow-layer');
+    const arrowSvg = document.getElementById('arrow-svg');
+    const inputN = document.getElementById('input-n');
+    const btnApply = document.getElementById('btn-apply');
+    const btnReset = document.getElementById('btn-reset');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnAuto = document.getElementById('btn-auto');
+    const autoIcon = document.getElementById('auto-icon');
+    const autoText = document.getElementById('auto-text');
+
+    // 變數顯示區
+    const varN = document.getElementById('var-n');
+    const varI = document.getElementById('var-i');
+    const varPrev1 = document.getElementById('var-prev1');
+    const varPrev2 = document.getElementById('var-prev2');
+    const varCurr = document.getElementById('var-curr');
+    const stepCounter = document.getElementById('step-counter');
+
+    // 解說與輸出區
+    const formulaBanner = document.getElementById('formula-banner');
+    const stageBadge = document.getElementById('stage-badge');
+    const stageTitle = document.getElementById('stage-title');
+    const stageDesc = document.getElementById('stage-desc');
+    const consoleOutput = document.getElementById('console-output');
+
+    /**
+     * 渲染左側 Python 程式碼列表
+     */
+    function renderCodeLines(nValue) {
+      codeContainer.innerHTML = '';
+      CODE_LINES.forEach((item) => {
+        const div = document.createElement('div');
+        div.id = `code-line-${item.lineNo}`;
+        div.className = 'code-line flex items-baseline px-2.5 py-0.5 rounded-lg';
+
+        // 動態替換第 16 行的 n 數值顯示
+        let displayText = item.text;
+        if (item.lineNo === 16) {
+          displayText = `n = ${nValue}  # 課堂設定目標索引`;
+        }
+
+        const lineNumSpan = document.createElement('span');
+        lineNumSpan.className = 'w-9 text-right pr-3 text-slate-500 select-none shrink-0 text-lg';
+        lineNumSpan.textContent = item.lineNo;
+
+        const codeSpan = document.createElement('pre');
+        codeSpan.className = `whitespace-pre font-medium ${
+          item.isComment ? 'text-emerald-400/90 italic' : 'text-slate-100'
+        }`;
+        codeSpan.textContent = displayText;
+
+        div.appendChild(lineNumSpan);
+        div.appendChild(codeSpan);
+        codeContainer.appendChild(div);
+      });
+    }
+
+    /**
+     * 根據輸入的 n 預先生成完整的教學步驟序列 (Step-by-step)
+     */
+    function generateSteps(n) {
+      const generated = [];
+      const dpSnapshot = Array(n + 1).fill(null);
+
+      // Step 0: 初始準備狀態
+      generated.push({
+        activeLine: 16,
+        badge: '準備階段',
+        badgeColor: 'bg-slate-600 text-white',
+        title: `設定目標計算第 ${n} 個費波納契數`,
+        desc: `主程式設定 n = ${n}，並準備呼叫 fibonacci(${n}) 函式進行動態規劃計算。`,
+        dp: [...dpSnapshot],
+        i: '-',
+        prev1: '-',
+        prev2: '-',
+        curr: '-',
+        targetIdx: null,
+        src1Idx: null,
+        src2Idx: null,
+        formulaHtml: `<span class="text-slate-300">呼叫函式：<span class="text-sky-300 font-bold">fibonacci(${n})</span></span>`,
+        output: null
+      });
+
+      // Step 1: 定義狀態 (Line 6)
+      const zeroArr = Array(n + 1).fill(0);
+      generated.push({
+        activeLine: 6,
+        badge: 'DP 步驟 1：定義狀態',
+        badgeColor: 'bg-sky-400 text-slate-950',
+        title: `建立長度為 n+1 (${n + 1}) 的記憶化陣列 dp`,
+        desc: `定義狀態：dp[i] 代表「第 i 個費波納契數的值」。建立索引 0 到 ${n} 的陣列，先全部填入 0 作為初始空間。`,
+        dp: [...zeroArr],
+        i: '-',
+        prev1: '-',
+        prev2: '-',
+        curr: '-',
+        targetIdx: null,
+        src1Idx: null,
+        src2Idx: null,
+        formulaHtml: `<span class="text-sky-300">dp = [0] * ${n + 1}</span> <span class="text-slate-400 text-lg ml-2">（索引 0 ~ ${n} 皆為 0）</span>`,
+        output: null
+      });
+
+      // Step 2: 初始化 dp[0] = 0 (Line 8)
+      generated.push({
+        activeLine: 8,
+        badge: 'DP 步驟 3：初始化',
+        badgeColor: 'bg-emerald-400 text-slate-950',
+        title: '設定最基礎子問題：dp[0] = 0',
+        desc: '初始化邊界條件：第 0 個費波納契數定義為 0，這是整個數列推導的第一個已知起點。',
+        dp: [...zeroArr],
+        i: '-',
+        prev1: '-',
+        prev2: '-',
+        curr: '0',
+        targetIdx: 0,
+        src1Idx: null,
+        src2Idx: null,
+        formulaHtml: `<span class="text-yellow-300 font-bold">dp[0] = 0</span> <span class="text-slate-400 text-lg ml-2">（基礎邊界值）</span>`,
+        output: null
+      });
+
+      // Step 3: 初始化 dp[1] = 1 (Line 9)
+      const initArr = [...zeroArr];
+      initArr[1] = 1;
+      generated.push({
+        activeLine: 9,
+        badge: 'DP 步驟 3：初始化',
+        badgeColor: 'bg-emerald-400 text-slate-950',
+        title: '設定第二個基礎子問題：dp[1] = 1',
+        desc: '初始化第二個邊界條件：第 1 個費波納契數定義為 1。有了 dp[0] 與 dp[1]，後續所有數字都能依序推出！',
+        dp: [...initArr],
+        i: '-',
+        prev1: '-',
+        prev2: '-',
+        curr: '1',
+        targetIdx: 1,
+        src1Idx: null,
+        src2Idx: null,
+        formulaHtml: `<span class="text-yellow-300 font-bold">dp[1] = 1</span> <span class="text-slate-400 text-lg ml-2">（基礎邊界值）</span>`,
+        output: null
+      });
+
+      // Step 4 ~ : 迴圈計算 i = 2 到 n (Line 11 & Line 13)
+      const workingDp = [...initArr];
+      for (let i = 2; i <= n; i++) {
+        // 先進入 for 迴圈頭 (Line 11)
+        generated.push({
+          activeLine: 11,
+          badge: 'DP 步驟 4：計算順序',
+          badgeColor: 'bg-indigo-400 text-slate-950',
+          title: `進入迴圈：準備計算 i = ${i}`,
+          desc: `由小到大依序填表，目前輪到計算第 ${i} 格（dp[${i}]）。此時它所依賴的 dp[${i - 1}] 與 dp[${i - 2}] 都已經算好存在表格中了。`,
+          dp: [...workingDp],
+          i: i,
+          prev1: workingDp[i - 1],
+          prev2: workingDp[i - 2],
+          curr: '?',
+          targetIdx: i,
+          src1Idx: i - 1,
+          src2Idx: i - 2,
+          formulaHtml: `<span class="text-slate-300">準備計算 </span><span class="text-yellow-300 font-bold">dp[${i}]</span> = <span class="text-sky-300">dp[${i - 1}]</span> + <span class="text-purple-300">dp[${i - 2}]</span>`,
+          output: null
+        });
+
+        // 執行狀態轉移方程 (Line 13)
+        const val1 = workingDp[i - 1];
+        const val2 = workingDp[i - 2];
+        const sum = val1 + val2;
+        workingDp[i] = sum;
+
+        generated.push({
+          activeLine: 13,
+          badge: 'DP 步驟 2：狀態轉移方程',
+          badgeColor: 'bg-amber-400 text-slate-950',
+          title: `狀態轉移：dp[${i}] = dp[${i - 1}] + dp[${i - 2}] = ${sum}`,
+          desc: `直接讀取表格中已存好的 dp[${i - 1}] (${val1}) 與 dp[${i - 2}] (${val2}) 相加，得到 ${sum} 並存入 dp[${i}]，完全無需重複遞迴！`,
+          dp: [...workingDp],
+          i: i,
+          prev1: val1,
+          prev2: val2,
+          curr: sum,
+          targetIdx: i,
+          src1Idx: i - 1,
+          src2Idx: i - 2,
+          formulaHtml: `<span class="text-yellow-300 font-bold">dp[${i}]</span> = <span class="text-sky-300 font-bold">${val1}</span> <span class="text-slate-400 text-base">(dp[${i - 1}])</span> + <span class="text-purple-300 font-bold">${val2}</span> <span class="text-slate-400 text-base">(dp[${i - 2}])</span> = <span class="text-yellow-300 font-black underline">${sum}</span>`,
+          output: null
+        });
+      }
+
+      // 迴圈結束，回傳 dp[n] (Line 14)
+      generated.push({
+        activeLine: 14,
+        badge: '完成填表：回傳最佳解',
+        badgeColor: 'bg-emerald-400 text-slate-950',
+        title: `迴圈結束，回傳最終答案 dp[${n}] = ${workingDp[n]}`,
+        desc: `表格全部填寫完畢！直接回傳陣列最後一格 dp[${n}] 的值 ${workingDp[n]} 給主程式。`,
+        dp: [...workingDp],
+        i: n,
+        prev1: workingDp[n - 1],
+        prev2: workingDp[n - 2],
+        curr: workingDp[n],
+        targetIdx: n,
+        src1Idx: null,
+        src2Idx: null,
+        formulaHtml: `<span class="text-emerald-300 font-bold">return dp[${n}]</span> <span class="text-slate-300">→ 回傳數值 </span><span class="text-yellow-300 font-black">${workingDp[n]}</span>`,
+        output: null
+      });
+
+      // 主程式印出結果 (Line 17)
+      generated.push({
+        activeLine: 17,
+        badge: '程式執行完畢',
+        badgeColor: 'bg-emerald-500 text-slate-950',
+        title: `輸出結果：第 ${n} 個費波那契數列的值是：${workingDp[n]}`,
+        desc: `整段程式僅用一個單層迴圈執行 ${n - 1} 次加法就求出解答，展現動態規劃「用空間換取時間」的威力！`,
+        dp: [...workingDp],
+        i: n,
+        prev1: workingDp[n - 1],
+        prev2: workingDp[n - 2],
+        curr: workingDp[n],
+        targetIdx: n,
+        src1Idx: null,
+        src2Idx: null,
+        formulaHtml: `<span class="text-emerald-300 font-bold">✔ 計算完成！時間複雜度 O(n)，空間複雜度 O(n)</span>`,
+        output: `第${n}個費波那契數列的值是：${workingDp[n]}`
+      });
+
+      return generated;
+    }
+
+    /**
+     * 渲染 DP 陣列表格結構
+     */
+    function buildDpTable(n) {
+      dpGrid.innerHTML = '';
+      // 設定網格欄數：1 欄標題 + (n+1) 欄數值
+      dpGrid.style.gridTemplateColumns = `96px repeat(${n + 1}, minmax(56px, 1fr))`;
+
+      // 第一列：索引標籤列 (n = 0 .. n)
+      const indexHeader = document.createElement('div');
+      indexHeader.className = 'bg-slate-800/90 border border-slate-700 rounded-xl py-3 px-2 flex items-center justify-center font-bold text-xl text-sky-300 code-font';
+      indexHeader.textContent = '索引 i';
+      dpGrid.appendChild(indexHeader);
+
+      for (let idx = 0; idx <= n; idx++) {
+        const idxCell = document.createElement('div');
+        idxCell.id = `idx-cell-${idx}`;
+        idxCell.className = 'bg-slate-800/70 border border-slate-700/90 rounded-xl py-3 flex items-center justify-center font-bold text-2xl text-slate-300 code-font transition-colors';
+        idxCell.textContent = idx;
+        dpGrid.appendChild(idxCell);
+      }
+
+      // 第二列：dp[i] 數值列
+      const valHeader = document.createElement('div');
+      valHeader.className = 'bg-slate-800/90 border border-slate-700 rounded-xl py-4 px-2 flex items-center justify-center font-bold text-xl text-amber-300 code-font';
+      valHeader.textContent = 'dp[i]';
+      dpGrid.appendChild(valHeader);
+
+      for (let idx = 0; idx <= n; idx++) {
+        const valCell = document.createElement('div');
+        valCell.id = `dp-cell-${idx}`;
+        valCell.className = 'dp-cell bg-slate-950 border-2 border-slate-800 rounded-xl py-4 flex items-center justify-center font-black text-2xl md:text-3xl text-slate-600 code-font';
+        valCell.textContent = '-';
+        dpGrid.appendChild(valCell);
+      }
+    }
+
+    /**
+     * 繪製動態 SVG 弧形狀態轉移箭頭 (從 dp[i-1] 與 dp[i-2] 指向 dp[i])
+     */
+    function drawTransitionArrows(src1Idx, src2Idx, targetIdx) {
+      arrowLayer.innerHTML = '';
+      if (src1Idx === null || src2Idx === null || targetIdx === null) return;
+
+      const svgRect = arrowSvg.getBoundingClientRect();
+      const elSrc1 = document.getElementById(`idx-cell-${src1Idx}`);
+      const elSrc2 = document.getElementById(`idx-cell-${src2Idx}`);
+      const elTarget = document.getElementById(`idx-cell-${targetIdx}`);
+
+      if (!elSrc1 || !elSrc2 || !elTarget || svgRect.width === 0) return;
+
+      const r1 = elSrc1.getBoundingClientRect();
+      const r2 = elSrc2.getBoundingClientRect();
+      const rt = elTarget.getBoundingClientRect();
+
+      // 計算相對於 SVG 畫布的中心 X 座標
+      const x1 = r1.left + r1.width / 2 - svgRect.left;
+      const x2 = r2.left + r2.width / 2 - svgRect.left;
+      const xt = rt.left + rt.width / 2 - svgRect.left;
+      const bottomY = svgRect.height - 4;
+
+      // 1. 較高弧線：dp[i-2] -> dp[i] (紫色)
+      const midX2 = (x2 + xt) / 2;
+      const ctrlY2 = 8;
+      const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path2.setAttribute('d', `M ${x2} ${bottomY} Q ${midX2} ${ctrlY2} ${xt - 6} ${bottomY - 2}`);
+      path2.setAttribute('fill', 'none');
+      path2.setAttribute('stroke', '#c084fc');
+      path2.setAttribute('stroke-width', '3.5');
+      path2.setAttribute('marker-end', 'url(#arrowhead-purple)');
+      path2.setAttribute('class', 'arrow-animated');
+      arrowLayer.appendChild(path2);
+
+      // 2. 較低弧線：dp[i-1] -> dp[i] (亮藍色)
+      const midX1 = (x1 + xt) / 2;
+      const ctrlY1 = 44;
+      const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path1.setAttribute('d', `M ${x1} ${bottomY} Q ${midX1} ${ctrlY1} ${xt + 6} ${bottomY - 2}`);
+      path1.setAttribute('fill', 'none');
+      path1.setAttribute('stroke', '#38bdf8');
+      path1.setAttribute('stroke-width', '3.5');
+      path1.setAttribute('marker-end', 'url(#arrowhead-sky)');
+      path1.setAttribute('class', 'arrow-animated');
+      arrowLayer.appendChild(path1);
+    }
+
+    /**
+     * 根據 currentStepIdx 更新整個畫面狀態
+     */
+    function renderStep() {
+      const step = steps[currentStepIdx];
+      if (!step) return;
+
+      // 1. 更新程式碼高亮行
+      document.querySelectorAll('.code-line').forEach((el) => {
+        el.classList.remove('code-line-active');
+      });
+      const activeEl = document.getElementById(`code-line-${step.activeLine}`);
+      if (activeEl) {
+        activeEl.classList.add('code-line-active');
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // 2. 更新變數看板
+      varN.textContent = currentN;
+      varI.textContent = step.i;
+      varPrev1.textContent = step.prev1;
+      varPrev2.textContent = step.prev2;
+      varCurr.textContent = step.curr;
+      stepCounter.textContent = `步驟 ${currentStepIdx} / ${steps.length - 1}`;
+
+      // 3. 更新 DP 表格儲存格與高亮樣式
+      step.dp.forEach((val, idx) => {
+        const cell = document.getElementById(`dp-cell-${idx}`);
+        const idxCell = document.getElementById(`idx-cell-${idx}`);
+        if (!cell || !idxCell) return;
+
+        // 重置樣式
+        cell.className = 'dp-cell border-2 rounded-xl py-4 flex items-center justify-center font-black text-2xl md:text-3xl code-font';
+        idxCell.className = 'bg-slate-800/70 border border-slate-700/90 rounded-xl py-3 flex items-center justify-center font-bold text-2xl text-slate-300 code-font transition-colors';
+
+        if (val === null) {
+          cell.textContent = '-';
+          cell.classList.add('bg-slate-950', 'border-slate-800', 'text-slate-600');
+        } else {
+          cell.textContent = val;
+          cell.classList.add('dp-cell-filled');
+        }
+
+        // 標示來源與目標格
+        if (idx === step.src1Idx) {
+          cell.classList.add('dp-cell-source1');
+          idxCell.classList.add('!text-sky-300', '!border-sky-500');
+        }
+        if (idx === step.src2Idx) {
+          cell.classList.add('dp-cell-source2');
+          idxCell.classList.add('!text-purple-300', '!border-purple-500');
+        }
+        if (idx === step.targetIdx) {
+          cell.classList.add('dp-cell-target');
+          idxCell.classList.add('!text-yellow-300', '!border-yellow-400', '!bg-yellow-500/20');
+        }
+      });
+
+      // 4. 更新算式看板與四部曲白話解說
+      formulaBanner.innerHTML = `<div class="text-xl md:text-2xl code-font">${step.formulaHtml}</div>`;
+      stageBadge.className = `px-3.5 py-1 rounded-lg font-black text-xl tracking-wide ${step.badgeColor}`;
+      stageBadge.textContent = step.badge;
+      stageTitle.textContent = step.title;
+      stageDesc.innerHTML = step.desc;
+
+      // 5. 更新主控台輸出
+      if (step.output) {
+        consoleOutput.textContent = step.output;
+        consoleOutput.className = 'text-yellow-300 font-bold';
+      } else {
+        consoleOutput.textContent = '尚未執行到 print() 輸出結果';
+        consoleOutput.className = 'text-slate-400';
+      }
+
+      // 6. 更新按鈕可用狀態
+      btnPrev.disabled = currentStepIdx === 0;
+      btnNext.disabled = currentStepIdx === steps.length - 1;
+
+      // 若已播放到最後一步，自動停止自動播放
+      if (currentStepIdx === steps.length - 1 && autoTimer) {
+        stopAutoPlay();
+      }
+
+      // 7. 繪製 SVG 轉移箭頭（需等 DOM 版面穩定）
+      requestAnimationFrame(() => {
+        drawTransitionArrows(step.src1Idx, step.src2Idx, step.targetIdx);
+      });
+    }
+
+    /**
+     * 自動播放控制
+     */
+    function startAutoPlay() {
+      if (currentStepIdx >= steps.length - 1) {
+        currentStepIdx = 0;
+        renderStep();
+      }
+      autoIcon.textContent = '⏸';
+      autoText.textContent = '暫停播放';
+      btnAuto.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+      btnAuto.classList.add('bg-amber-600', 'hover:bg-amber-500');
+
+      autoTimer = setInterval(() => {
+        if (currentStepIdx < steps.length - 1) {
+          currentStepIdx++;
+          renderStep();
+        } else {
+          stopAutoPlay();
+        }
+      }, 1800);
+    }
+
+    function stopAutoPlay() {
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+      autoIcon.textContent = '▶';
+      autoText.textContent = '自動播放';
+      btnAuto.classList.remove('bg-amber-600', 'hover:bg-amber-500');
+      btnAuto.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+    }
+
+    /**
+     * 初始化 / 重置整個演示環境
+     */
+    function initSimulation(nValue) {
+      stopAutoPlay();
+      let parsed = parseInt(nValue, 10);
+      if (isNaN(parsed) || parsed < 2) parsed = 2;
+      if (parsed > 10) parsed = 10;
+      inputN.value = parsed;
+      currentN = parsed;
+
+      renderCodeLines(currentN);
+      buildDpTable(currentN);
+      steps = generateSteps(currentN);
+      currentStepIdx = 0;
+      renderStep();
+    }
+
+    // 綁定互動事件
+    btnApply.addEventListener('click', () => initSimulation(inputN.value));
+    inputN.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') initSimulation(inputN.value);
+    });
+
+    btnReset.addEventListener('click', () => {
+      stopAutoPlay();
+      currentStepIdx = 0;
+      renderStep();
+    });
+
+    btnPrev.addEventListener('click', () => {
+      stopAutoPlay();
+      if (currentStepIdx > 0) {
+        currentStepIdx--;
+        renderStep();
+      }
+    });
+
+    btnNext.addEventListener('click', () => {
+      stopAutoPlay();
+      if (currentStepIdx < steps.length - 1) {
+        currentStepIdx++;
+        renderStep();
+      }
+    });
+
+    btnAuto.addEventListener('click', () => {
+      if (autoTimer) {
+        stopAutoPlay();
+      } else {
+        startAutoPlay();
+      }
+    });
+
+    // 支援鍵盤左右方向鍵操作簡報，方便老師拿簡報筆或鍵盤切換步驟
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement === inputN) return;
+      if (e.key === 'ArrowRight') {
+        stopAutoPlay();
+        if (currentStepIdx < steps.length - 1) {
+          currentStepIdx++;
+          renderStep();
+        }
+      } else if (e.key === 'ArrowLeft') {
+        stopAutoPlay();
+        if (currentStepIdx > 0) {
+          currentStepIdx--;
+          renderStep();
+        }
+      }
+    });
+
+    // 視窗縮放時重新對齊 SVG 箭頭位置
+    window.addEventListener('resize', () => {
+      const step = steps[currentStepIdx];
+      if (step) {
+        drawTransitionArrows(step.src1Idx, step.src2Idx, step.targetIdx);
+      }
+    });
+
+    // 啟動初始化
+    window.onload = () => {
+      initSimulation(6);
+    };
+  </script>
+</body>
+</html>

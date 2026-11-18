@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>16-5 最長共用子字串 vs. 子序列 — 動態規劃同步教學動畫</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --code-bg: #0b1120;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --cyan: #38bdf8;
+    --amber: #fbbf24;
+    --green: #34d399;
+    --purple: #c084fc;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    padding: 16px 22px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .title-area h1 { font-size: 24px; color: var(--purple); margin-bottom: 4px; }
+  .title-area p { font-size: 15px; color: var(--muted); }
+  .controls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  button, select, input {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 8px 13px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  button, select { cursor: pointer; transition: all 0.15s; }
+  select, input { background: var(--code-bg); color: var(--text); }
+  input { width: 105px; font-family: Consolas, monospace; text-align: center; }
+  .btn-nav { background: #334155; color: var(--text); }
+  .btn-nav:hover:not(:disabled) { background: #475569; }
+  .btn-primary { background: var(--cyan); color: #0f172a; border-color: var(--cyan); }
+  .btn-primary:hover:not(:disabled) { background: #7dd3fc; }
+  .btn-play { background: var(--green); color: #0f172a; border-color: var(--green); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .step-badge {
+    font-size: 15px;
+    background: var(--code-bg);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--amber);
+    font-weight: bold;
+  }
+
+  .custom-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+    font-size: 15px;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1.15fr;
+    gap: 16px;
+    flex: 1;
+  }
+  @media (max-width: 1150px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card-title {
+    font-size: 19px;
+    font-weight: bold;
+    color: var(--cyan);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  .code-container {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 10px 0;
+    font-family: "Consolas", monospace;
+    font-size: 15px;
+    line-height: 1.62;
+    overflow-x: auto;
+    border: 1px solid #1e293b;
+  }
+  .code-line {
+    padding: 2px 12px;
+    display: flex;
+    white-space: pre;
+    border-left: 4px solid transparent;
+  }
+  .line-num { color: #475569; width: 30px; user-select: none; flex-shrink: 0; }
+  .code-line.active {
+    background: rgba(192, 132, 252, 0.22);
+    border-left-color: var(--amber);
+    color: #ffffff;
+    font-weight: bold;
+  }
+  .kw { color: #c084fc; }
+  .fn { color: #38bdf8; }
+
+  .vars-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .var-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+  .var-name { font-size: 12px; color: var(--muted); font-family: Consolas, monospace; }
+  .var-val { font-size: 17px; font-weight: bold; color: var(--amber); margin-top: 2px; font-family: Consolas, monospace; }
+
+  .table-wrap { overflow-x: auto; padding: 4px; display: flex; justify-content: center; }
+  table.dp-table {
+    border-collapse: collapse;
+    text-align: center;
+    font-size: 19px;
+    font-family: Consolas, monospace;
+  }
+  .dp-table th, .dp-table td {
+    border: 1.5px solid var(--border);
+    width: 66px;
+    height: 58px;
+    transition: all 0.2s;
+  }
+  .dp-table th {
+    background: #172554;
+    color: var(--cyan);
+    font-weight: bold;
+    font-size: 20px;
+  }
+  .dp-table td.row-header {
+    background: #16213e;
+    color: var(--cyan);
+    font-weight: bold;
+    font-size: 20px;
+  }
+  .char-match-head {
+    background: rgba(52, 211, 153, 0.28) !important;
+    color: var(--green) !important;
+  }
+
+  .cell-target {
+    background: rgba(251, 191, 36, 0.28) !important;
+    border: 2.5px solid var(--amber) !important;
+    color: var(--amber);
+    font-weight: bold;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+  }
+  .cell-diag {
+    background: rgba(52, 211, 153, 0.24) !important;
+    border: 2px dashed var(--green) !important;
+    color: var(--green);
+    font-weight: bold;
+  }
+  .cell-neighbor {
+    background: rgba(56, 189, 248, 0.22) !important;
+    border: 2px dashed var(--cyan) !important;
+    color: var(--cyan);
+    font-weight: bold;
+  }
+  .cell-best-record {
+    background: rgba(192, 132, 252, 0.25);
+    color: var(--purple);
+    font-weight: bold;
+  }
+
+  .legend { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .leg-box { width: 14px; height: 14px; border-radius: 3px; }
+
+  .explain-box {
+    background: var(--code-bg);
+    border-left: 5px solid var(--purple);
+    border-radius: 8px;
+    padding: 13px 15px;
+    font-size: 17px;
+    line-height: 1.5;
+    min-height: 120px;
+  }
+  .formula-compare {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(30, 41, 59, 0.85);
+    border-radius: 6px;
+    font-family: Consolas, "Microsoft JhengHei", monospace;
+    font-size: 15px;
+    color: var(--amber);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-area">
+    <h1 id="mainHeading">16-5-1 最長共用子字串（Substring）— 動態規劃動畫（ch16_7.py）</h1>
+    <p id="subHeading">字元相同時左上角 + 1；字元不同時連續中斷直接歸 0</p>
+  </div>
+  <div class="controls">
+    <select id="modeSelect" onchange="initSimulation()">
+      <option value="substring" selected>16-5-1 最長共用子字串（ch16_7.py｜必須連續）</option>
+      <option value="subsequence">16-5-2 最長共用子序列（ch16_8.py｜可不連續）</option>
+    </select>
+    <button class="btn-nav" onclick="resetSim()">⟲ 重置</button>
+    <button class="btn-nav" id="prevBtn" onclick="prevStep()">◀ 上一步</button>
+    <button class="btn-primary" id="nextBtn" onclick="nextStep()">下一步 ▶</button>
+    <button class="btn-play" id="playBtn" onclick="togglePlay()">▶ 自動播放</button>
+    <div class="step-badge" id="stepCounter">步驟 0 / 0</div>
+  </div>
+</header>
+
+<div class="custom-bar">
+  <span style="color:var(--cyan); font-weight:bold;">自訂比對字串（建議 3~8 字元）：</span>
+  <label>word1 (列)：<input type="text" id="inputW1" value="text" maxlength="8"></label>
+  <label>word2 (欄)：<input type="text" id="inputW2" value="test" maxlength="8"></label>
+  <button class="btn-primary" onclick="initSimulation()">套用字串並重算</button>
+  <button class="btn-nav" onclick="setPreset('text','test')">預設：text / test</button>
+  <button class="btn-nav" onclick="setPreset('abcde','ace')">範例：abcde / ace</button>
+  <button class="btn-nav" onclick="setPreset('python','pythonic')">範例：python / pythonic</button>
+</div>
+
+<div class="main-grid">
+  <div class="card">
+    <div class="card-title">
+      <span id="codeTitle">Python 程式碼逐行追蹤（ch16_7.py）</span>
+      <span style="font-size:13px; color:var(--muted);">支援鍵盤 ← / → 切換</span>
+    </div>
+    <div class="code-container" id="codeBox"></div>
+
+    <div class="card-title" style="margin-top:2px;">
+      <span>即時變數監控（Memory Watch）</span>
+    </div>
+    <div class="vars-grid">
+      <div class="var-box"><div class="var-name">索引 (x, y)</div><div class="var-val" id="varXY">-</div></div>
+      <div class="var-box"><div class="var-name">字元比較</div><div class="var-val" id="varChars">-</div></div>
+      <div class="var-box"><div class="var-name">目前最長 longest</div><div class="var-val" id="varLongest">0</div></div>
+      <div class="var-box"><div class="var-name" id="lblVarExtra">結束索引 / 結果</div><div class="var-val" id="varExtra">-</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>二維狀態表格 cell[x][y]（含第 0 列與第 0 欄零邊界）</span>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(251,191,36,0.35); border:2px solid var(--amber);"></div>目前格</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(52,211,153,0.3); border:2px dashed var(--green);"></div>相等：左上角+1</div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(56,189,248,0.3); border:2px dashed var(--cyan);"></div>不相等：上/左格</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="dp-table" id="dpTable"></table>
+    </div>
+
+    <div class="explain-box" id="explainBox">
+      點擊「下一步」開始逐步演示字串比對填表過程。
+    </div>
+  </div>
+</div>
+
+<script>
+const CODE_TEMPLATES = {
+  substring: [
+    'def longest_common_substring(word1, word2):',
+    '    cell = [[0] * (1 + len(word2)) for i in range(1 + len(word1))]',
+    '    longest = 0',
+    '    x_longest_index = 0',
+    '    for x in range(1, 1 + len(word1)):',
+    '        for y in range(1, 1 + len(word2)):',
+    '            if word1[x - 1] == word2[y - 1]:',
+    '                cell[x][y] = cell[x - 1][y - 1] + 1',
+    '                if cell[x][y] > longest:',
+    '                    longest = cell[x][y]',
+    '                    x_longest_index = x',
+    '            else:',
+    '                cell[x][y] = 0',
+    '    return word1[x_longest_index - longest : x_longest_index]'
+  ],
+  subsequence: [
+    'def longest_common_subsequence(word1, word2):',
+    '    cell = [[0] * (1 + len(word2)) for i in range(1 + len(word1))]',
+    '    longest = 0',
+    '    for x in range(1, 1 + len(word1)):',
+    '        for y in range(1, 1 + len(word2)):',
+    '            if word1[x - 1] == word2[y - 1]:',
+    '                cell[x][y] = cell[x - 1][y - 1] + 1',
+    '                if cell[x][y] > longest:',
+    '                    longest = cell[x][y]',
+    '            else:',
+    '                cell[x][y] = max(cell[x - 1][y], cell[x][y - 1])',
+    '    return longest'
+  ]
+};
+
+let steps = [];
+let currentStep = 0;
+let playTimer = null;
+
+function setPreset(w1, w2) {
+  document.getElementById('inputW1').value = w1;
+  document.getElementById('inputW2').value = w2;
+  initSimulation();
+}
+
+function renderCode(mode) {
+  const lines = CODE_TEMPLATES[mode];
+  const box = document.getElementById('codeBox');
+  box.innerHTML = lines.map((line, idx) => {
+    let formatted = line
+      .replace(/(def|for|in|range|if|else|return)/g, '<span class="kw">$1</span>')
+      .replace(/(longest_common_substring|longest_common_subsequence|len|max)/g, '<span class="fn">$1</span>');
+    return `<div class="code-line" id="line-${idx + 1}"><span class="line-num">${idx + 1}</span><span>${formatted}</span></div>`;
+  }).join('');
+}
+
+function buildSteps(mode, w1, w2) {
+  const m = w1.length;
+  const n = w2.length;
+  const simSteps = [];
+  const cloneGrid = (g) => g.map(row => [...row]);
+
+  let grid = Array.from({ length: m + 1 }, () => Array(n + 1).fill(null));
+  for (let x = 0; x <= m; x++) grid[x][0] = 0;
+  for (let y = 0; y <= n; y++) grid[0][y] = 0;
+
+  let longest = 0;
+  let xLongestIdx = 0;
+  let bestCoords = null;
+
+  simSteps.push({
+    line: 2, xy: '-', chars: '-', longest: 0, extra: '-',
+    grid: cloneGrid(grid), target: null, diag: null, neighbors: [], bestCoords: null,
+    title: '步驟 1｜建立 (len(word1)+1) × (len(word2)+1) 表格並初始化零邊界',
+    desc: '第 0 列與第 0 欄皆預先填 0，避免第 1 列或第 1 欄字元相等時查詢左上角 [x-1][y-1] 發生索引邊界問題。',
+    formula: `表格大小：(${m + 1}) 列 × (${n + 1}) 欄，邊界全為 0`
+  });
+
+  for (let x = 1; x <= m; x++) {
+    for (let y = 1; y <= n; y++) {
+      const c1 = w1[x - 1];
+      const c2 = w2[y - 1];
+
+      if (c1 === c2) {
+        const diagVal = grid[x - 1][y - 1];
+        const newVal = diagVal + 1;
+        grid[x][y] = newVal;
+        let updatedBest = false;
+        if (newVal > longest) {
+          longest = newVal;
+          xLongestIdx = x;
+          bestCoords = [x, y];
+          updatedBest = true;
+        }
+
+        const lineNum = mode === 'substring' ? (updatedBest ? 11 : 8) : (updatedBest ? 9 : 7);
+        const subStrPreview = mode === 'substring' ? w1.slice(xLongestIdx - longest, xLongestIdx) : `長度 ${longest}`;
+
+        simSteps.push({
+          line: lineNum, xy: `(${x}, ${y})`, chars: `'${c1}' == '${c2}'`,
+          longest, extra: mode === 'substring' ? `idx=${xLongestIdx} ("${subStrPreview}")` : `長度=${longest}`,
+          grid: cloneGrid(grid), target: [x, y], diag: [x - 1, y - 1], neighbors: [], bestCoords: bestCoords ? [...bestCoords] : null,
+          title: `字元相等！word1[${x-1}]='${c1}' == word2[${y-1}]='${c2}'`,
+          desc: `取左上角對角線 cell[${x-1}][${y-1}] = ${diagVal} 再加 1，得到 ${newVal}。${updatedBest ? '★ 刷新目前最長紀錄！' : ''}`,
+          formula: `cell[${x}][${y}] = cell[${x-1}][${y-1}] + 1 = ${diagVal} + 1 = ${newVal}`
+        });
+      } else {
+        if (mode === 'substring') {
+          grid[x][y] = 0;
+          const subStrPreview = longest > 0 ? w1.slice(xLongestIdx - longest, xLongestIdx) : '-';
+          simSteps.push({
+            line: 13, xy: `(${x}, ${y})`, chars: `'${c1}' != '${c2}'`,
+            longest, extra: `idx=${xLongestIdx} ("${subStrPreview}")`,
+            grid: cloneGrid(grid), target: [x, y], diag: null, neighbors: [], bestCoords: bestCoords ? [...bestCoords] : null,
+            title: `字元不同！word1[${x-1}]='${c1}' != word2[${y-1}]='${c2}'（連續中斷）`,
+            desc: '最長共用子字串要求字元必須「連續」，一旦不相等就歸 0 重新計算。',
+            formula: `cell[${x}][${y}] = 0`
+          });
+        } else {
+          const upVal = grid[x - 1][y];
+          const leftVal = grid[x][y - 1];
+          const chosen = Math.max(upVal, leftVal);
+          grid[x][y] = chosen;
+          simSteps.push({
+            line: 11, xy: `(${x}, ${y})`, chars: `'${c1}' != '${c2}'`,
+            longest, extra: `長度=${longest}`,
+            grid: cloneGrid(grid), target: [x, y], diag: null, neighbors: [[x - 1, y], [x, y - 1]], bestCoords: bestCoords ? [...bestCoords] : null,
+            title: `字元不同！word1[${x-1}]='${c1}' != word2[${y-1}]='${c2}'（保留累積序列）`,
+            desc: '最長共用子序列允許跳字，不歸零！取「正上方」與「正左方」的最大值以延續先前的共用序列長度。',
+            formula: `cell[${x}][${y}] = max(上方 cell[${x-1}][${y}]=${upVal}, 左方 cell[${x}][${y-1}]=${leftVal}) = ${chosen}`
+          });
+        }
+      }
+    }
+  }
+
+  if (mode === 'substring') {
+    const ansStr = w1.slice(xLongestIdx - longest, xLongestIdx);
+    simSteps.push({
+      line: 14, xy: '-', chars: '完成', longest, extra: `"${ansStr}"`,
+      grid: cloneGrid(grid), target: bestCoords, diag: null, neighbors: [], bestCoords,
+      title: `比對完成！最長共用子字串為 "${ansStr}"（長度 ${longest}）`,
+      desc: `利用結束索引 x_longest_index = ${xLongestIdx} 與長度 ${longest}，切片 word1[${xLongestIdx - longest}:${xLongestIdx}] 取出結果。`,
+      formula: `return word1[${xLongestIdx - longest} : ${xLongestIdx}] ➔ "${ansStr}"`
+    });
+  } else {
+    simSteps.push({
+      line: 12, xy: `(${m}, ${n})`, chars: '完成', longest, extra: `長度=${longest}`,
+      grid: cloneGrid(grid), target: [m, n], diag: null, neighbors: [], bestCoords: [m, n],
+      title: `比對完成！最長共用子序列（LCS）長度為 ${longest}`,
+      desc: `右下角 cell[${m}][${n}] = ${grid[m][n]} 即為 "${w1}" 與 "${w2}" 的最長共用子序列長度。`,
+      formula: `return longest ➔ ${longest}`
+    });
+  }
+
+  return simSteps;
+}
+
+function renderStep() {
+  const mode = document.getElementById('modeSelect').value;
+  const w1 = document.getElementById('inputW1').value || 'text';
+  const w2 = document.getElementById('inputW2').value || 'test';
+  const s = steps[currentStep];
+
+  document.getElementById('stepCounter').textContent = `步驟 ${currentStep + 1} / ${steps.length}`;
+  document.getElementById('prevBtn').disabled = (currentStep === 0);
+  document.getElementById('nextBtn').disabled = (currentStep === steps.length - 1);
+
+  document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+  const activeLine = document.getElementById(`line-${s.line}`);
+  if (activeLine) activeLine.classList.add('active');
+
+  document.getElementById('varXY').textContent = s.xy;
+  document.getElementById('varChars').textContent = s.chars;
+  document.getElementById('varLongest').textContent = s.longest;
+  document.getElementById('varExtra').textContent = s.extra;
+
+  // Render Table
+  const tbl = document.getElementById('dpTable');
+  let html = '<thead><tr><th></th><th>Ø (0)</th>';
+  for (let y = 1; y <= w2.length; y++) {
+    const isColActive = s.target && s.target[1] === y;
+    html += `<th class="${isColActive ? 'char-match-head' : ''}">${w2[y - 1]}<br><span style="font-size:12px;font-weight:normal;">y=${y}</span></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let x = 0; x <= w1.length; x++) {
+    html += '<tr>';
+    if (x === 0) {
+      html += `<td class="row-header">Ø (0)</td>`;
+    } else {
+      const isRowActive = s.target && s.target[0] === x;
+      html += `<td class="row-header ${isRowActive ? 'char-match-head' : ''}">${w1[x - 1]} <span style="font-size:12px;font-weight:normal;">(x=${x})</span></td>`;
+    }
+
+    for (let y = 0; y <= w2.length; y++) {
+      const val = s.grid[x][y];
+      let cls = '';
+      if (s.target && s.target[0] === x && s.target[1] === y) cls = 'cell-target';
+      else if (s.diag && s.diag[0] === x && s.diag[1] === y) cls = 'cell-diag';
+      else if (s.neighbors.some(nb => nb[0] === x && nb[1] === y)) cls = 'cell-neighbor';
+      else if (s.bestCoords && s.bestCoords[0] === x && s.bestCoords[1] === y) cls = 'cell-best-record';
+
+      html += `<td class="${cls}">${val === null ? '-' : val}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+
+  document.getElementById('explainBox').innerHTML = `
+    <div style="font-weight:bold; color:var(--purple); margin-bottom:4px;">${s.title}</div>
+    <div>${s.desc}</div>
+    <div class="formula-compare">${s.formula}</div>
+  `;
+}
+
+function initSimulation() {
+  stopPlay();
+  const mode = document.getElementById('modeSelect').value;
+  let w1 = document.getElementById('inputW1').value.trim();
+  let w2 = document.getElementById('inputW2').value.trim();
+  if (!w1) { w1 = 'text'; document.getElementById('inputW1').value = w1; }
+  if (!w2) { w2 = 'test'; document.getElementById('inputW2').value = w2; }
+
+  if (mode === 'substring') {
+    document.getElementById('mainHeading').textContent = '16-5-1 最長共用子字串（Substring）— 動態規劃動畫（ch16_7.py）';
+    document.getElementById('subHeading').textContent = '字元相同時左上角 + 1；字元不同時連續中斷直接歸 0';
+    document.getElementById('codeTitle').textContent = 'Python 程式碼逐行追蹤（ch16_7.py）';
+  } else {
+    document.getElementById('mainHeading').textContent = '16-5-2 最長共用子序列（LCS）— 動態規劃動畫（ch16_8.py）';
+    document.getElementById('subHeading').textContent = '字元相同時左上角 + 1；字元不同時取上方與左方最大值';
+    document.getElementById('codeTitle').textContent = 'Python 程式碼逐行追蹤（ch16_8.py）';
+  }
+
+  renderCode(mode);
+  steps = buildSteps(mode, w1, w2);
+  currentStep = 0;
+  renderStep();
+}
+
+function nextStep() {
+  if (currentStep < steps.length - 1) { currentStep++; renderStep(); }
+  else { stopPlay(); }
+}
+function prevStep() {
+  if (currentStep > 0) { currentStep--; renderStep(); }
+}
+function resetSim() {
+  stopPlay(); currentStep = 0; renderStep();
+}
+function togglePlay() {
+  if (playTimer) { stopPlay(); }
+  else {
+    if (currentStep === steps.length - 1) currentStep = 0;
+    document.getElementById('playBtn').textContent = '⏸ 暫停播放';
+    playTimer = setInterval(() => {
+      if (currentStep < steps.length - 1) { currentStep++; renderStep(); }
+      else { stopPlay(); }
+    }, 1200);
+  }
+}
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  document.getElementById('playBtn').textContent = '▶ 自動播放';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (document.activeElement.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') nextStep();
+  if (e.key === 'ArrowLeft') prevStep();
+});
+
+initSimulation();
+</script>
+</body>
+</html>
